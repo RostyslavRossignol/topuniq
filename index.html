@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="uk" class="dark">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Сліпий Цукер Pro | Анти-бан креативів</title>
+    <!-- Прикольный SVG Фавикон (Обезьянка, которая ничего не видит) -->
+    <link rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🙈</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet">
+
+    <script>
+        // Перевірка збереженої теми
+        if (localStorage.theme === 'light') {
+            document.documentElement.classList.remove('dark');
+        } else {
+            document.documentElement.classList.add('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class', 
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        surface: '#ffffff', 
+                        bgbase: '#f8fafc',  
+                        input: '#ffffff',   
+                        dark: {
+                            bg: '#0f0f11',      
+                            surface: '#18181b', 
+                            input: '#27272a',   
+                            border: '#3f3f46'
+                        },
+                        brand: {
+                            500: '#8b5cf6', 
+                            600: '#7c3aed',
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(15, 23, 42, 0.05)',
+                        'soft-dark': '0 10px 40px -10px rgba(0,0,0,0.5)',
+                        'glow': '0 0 20px rgba(139, 92, 246, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            -webkit-font-smoothing: antialiased;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #52525b; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #71717a; }
+
+        /* Перемикачі */
+        .toggle-switch {
+            appearance: none;
+            width: 44px;
+            min-width: 44px; /* Забороняємо звуження тумблера */
+            height: 24px;
+            min-height: 24px; /* Забороняємо звуження тумблера */
+            flex-shrink: 0; /* Щоб flexbox не ламав розмір */
+            border-radius: 24px;
+            position: relative;
+            cursor: pointer;
+            outline: none;
+            transition: background 0.3s ease;
+        }
+        .toggle-switch { background: #e2e8f0; }
+        .dark .toggle-switch { background: #3f3f46; }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        .toggle-switch:checked {
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+        }
+        .toggle-switch:checked::after {
+            transform: translateX(20px);
+        }
+
+        /* Інпути */
+        input[type="number"], input[type="text"], select {
+            transition: all 0.2s;
+        }
+        input[type="number"]:focus, input[type="text"]:focus, select:focus {
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+            border-color: #8b5cf6 !important;
+            outline: none;
+        }
+        
+        @media (max-width: 768px) {
+            input[type="number"], input[type="text"], select {
+                font-size: 16px !important;
+            }
+        }
+        
+        /* Зона завантаження */
+        .drop-zone {
+            transition: all 0.3s ease;
+        }
+        .drag-active {
+            border-color: #8b5cf6 !important;
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield; 
+        }
+    </style>
+  </head>
+  <body
+    class="min-h-screen p-3 md:p-8 font-sans bg-bgbase text-slate-900 dark:bg-dark-bg dark:text-zinc-100">
+
+    <!-- Переможна анімація після завантаження ZIP -->
+    <div id="successZuckModal"
+      class="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-500 bg-black/60 backdrop-blur-sm hidden">
+      <div
+        class="relative w-64 h-64 md:w-80 md:h-80 bg-[#0f0f11] rounded-[32px] overflow-hidden border-4 border-green-500/50 shadow-[0_0_50px_rgba(34,197,94,0.4)] transform scale-50 transition-transform duration-500"
+        id="successZuckScale">
+        <img src="https://i.gifer.com/7rs7.gif"
+          class="w-full h-full object-cover" alt="Цукер схвалює">
+        <div class="absolute bottom-4 left-0 w-full text-center">
+          <span
+            class="bg-black/90 text-green-400 text-xs md:text-sm uppercase tracking-wider font-bold px-5 py-2.5 rounded-full border border-green-500/50 shadow-lg inline-block animate-bounce">Місія
+            виконана! 💸</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-[1200px] mx-auto">
+      <!-- Пасхалка: Цукер виглядає зверху -->
+      <div class="flex justify-center -mb-8 md:-mb-10 relative z-0 pt-4"
+        title="Цукер стежить за тобою...">
+        <div
+          class="relative w-28 h-28 md:w-36 md:h-36 rounded-t-full overflow-hidden border-4 border-b-0 border-violet-500/30 dark:border-violet-500/20 bg-[#0f0f11] transform translate-y-2 md:translate-y-3">
+          <iframe src="https://gifer.com/embed/FFbS" width="100%" height="100%"
+            style="position:absolute;top:calc(-10% - 13px);left:0;pointer-events:none;transform:scale(1.7);transform-origin:center top;"
+            frameBorder="0" allowFullScreen></iframe>
+        </div>
+      </div>
+
+      <!-- Шапка -->
+      <header
+        class="relative z-10 mb-6 md:mb-8 flex items-center justify-between gap-4 bg-surface dark:bg-dark-surface p-4 rounded-2xl md:rounded-[24px] shadow-soft dark:shadow-soft-dark border border-slate-200 dark:border-zinc-800 transition-colors">
+        <div class="flex items-center gap-3">
+          <div
+            class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center shadow-glow shrink-0">
+            <i data-lucide="eye-off" class="text-white w-5 h-5 md:w-6 md:h-6"
+              stroke-width="2"></i>
+          </div>
+          <div>
+            <h1
+              class="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">Сліпий
+              <span class="text-gradient">Цукер</span></h1>
+            <p
+              class="text-xs md:text-sm text-slate-500 dark:text-zinc-400">Модератори
+              цього не побачать 🙈</p>
+          </div>
+        </div>
+
+        <!-- Кнопка перемикання теми -->
+        <button id="themeToggle"
+          class="p-2.5 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors"
+          title="Перемкнути тему">
+          <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
+          <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+        </button>
+      </header>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+
+        <!-- Ліва колонка: Налаштування -->
+        <div class="lg:col-span-4 flex flex-col gap-4 md:gap-5">
+
+          <!-- Блок 1: Базові налаштування -->
+          <div
+            class="bg-surface dark:bg-dark-surface rounded-[20px] md:rounded-[24px] p-5 md:p-6 shadow-soft dark:shadow-soft-dark border border-slate-200 dark:border-zinc-800 transition-colors">
+            <h2
+              class="text-xs md:text-sm font-semibold text-slate-800 dark:text-zinc-200 uppercase tracking-wider mb-4 md:mb-5 flex items-center gap-2">
+              <i data-lucide="sliders" class="w-4 h-4 text-violet-500"></i>
+              Налаштування маскування 🎭
+            </h2>
+
+            <div class="space-y-4 md:space-y-5">
+              <div class="flex gap-3">
+                <div class="w-1/2">
+                  <label
+                    class="block text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">Рамка
+                    (відлякувач), px</label>
+                  <div
+                    class="flex items-center bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/30 focus-within:border-violet-500 transition-all shadow-sm">
+                    <button type="button" id="borderMinus"
+                      class="w-12 h-[42px] flex items-center justify-center text-slate-500 hover:text-violet-600 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shrink-0 border-r border-slate-200 dark:border-zinc-800">
+                      <i data-lucide="minus" class="w-5 h-5"></i>
+                    </button>
+                    <input type="number" id="borderWidth" value="0" min="0"
+                      max="100"
+                      class="w-full h-[42px] bg-transparent text-center text-slate-800 dark:text-zinc-100 text-base font-bold outline-none border-none p-0 focus:ring-0"
+                      style="box-shadow: none;">
+                    <button type="button" id="borderPlus"
+                      class="w-12 h-[42px] flex items-center justify-center text-slate-500 hover:text-violet-600 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shrink-0 border-l border-slate-200 dark:border-zinc-800">
+                      <i data-lucide="plus" class="w-5 h-5"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="w-1/2">
+                  <label
+                    class="block text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">Колір
+                    рамки</label>
+                  <div class="flex items-center gap-2">
+                    <input type="color" id="borderColor" value="#000000"
+                      class="w-[42px] h-[42px] rounded-xl cursor-pointer bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 p-0.5 shrink-0 shadow-sm">
+                    <div class="flex flex-wrap gap-1.5"
+                      id="borderPalette"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  class="block text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">Суфікс
+                  (щоб Цукер не знайшов)</label>
+                <input type="text" id="nameSuffix" value="_uniq"
+                  class="w-full bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-slate-800 dark:text-zinc-100 text-sm">
+              </div>
+
+              <div>
+                <label
+                  class="block text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">Формат
+                  (плутаємо сліди)</label>
+                <select id="outputFormat"
+                  class="w-full bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-slate-800 dark:text-zinc-100 text-sm appearance-none">
+                  <option value="auto">Не чіпати рідний</option>
+                  <option value="image/jpeg">JPEG (Швидкий та легкий)</option>
+                  <option value="image/png">PNG (Важкий, без втрат)</option>
+                  <option value="image/webp">WebP (Цукер в шоці)</option>
+                </select>
+              </div>
+
+              <div class="pt-2">
+                <div class="flex justify-between items-start mb-1.5">
+                  <div class="flex flex-col">
+                    <label
+                      class="block text-xs font-semibold text-slate-500 dark:text-zinc-400">Якість
+                      (стискаємо пікселі)</label>
+                    <span
+                      class="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">PNG
+                      на дієту не сідає 🍔 (тільки JPEG/WebP)</span>
+                  </div>
+                  <span id="qualityValue"
+                    class="text-xs font-bold text-violet-500 mt-0.5">100%</span>
+                </div>
+                <input type="range" id="imageQuality" min="10" max="100"
+                  value="100"
+                  class="w-full h-1.5 bg-slate-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-violet-500 mt-1">
+              </div>
+            </div>
+          </div>
+
+          <!-- Блок 2: Трансформація & Унік -->
+          <div
+            class="bg-surface dark:bg-dark-surface rounded-[20px] md:rounded-[24px] p-5 md:p-6 shadow-soft dark:shadow-soft-dark border border-slate-200 dark:border-zinc-800 transition-colors">
+            <h2
+              class="text-xs md:text-sm font-semibold text-slate-800 dark:text-zinc-200 uppercase tracking-wider mb-4 md:mb-5 flex items-center gap-2">
+              <i data-lucide="crop" class="w-4 h-4 text-pink-500"></i> Знущання
+              з креативу ✂️
+            </h2>
+
+            <div class="space-y-5 md:space-y-6">
+              <!-- Адаптація -->
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex flex-col pr-4">
+                    <span
+                      class="text-sm font-semibold text-slate-800 dark:text-zinc-200">Підігнати
+                      розмір</span>
+                    <span
+                      class="text-[10px] md:text-xs text-slate-500 dark:text-zinc-400">Впихнути
+                      невпихуєме</span>
+                  </div>
+                  <input type="checkbox" id="enableResize"
+                    class="toggle-switch">
+                </div>
+
+                <div id="resizeSettings"
+                  class="hidden space-y-3 mt-3 pt-4 border-t border-slate-100 dark:border-zinc-800/50">
+                  <div>
+                    <label
+                      class="block text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">Формат</label>
+                    <select id="presetSize"
+                      class="w-full bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-slate-800 dark:text-zinc-100 text-sm appearance-none">
+                      <option value="1080x1080">Квадрат (Стрічка 1:1) •
+                        1080x1080</option>
+                      <option value="675x675">Малий Квадрат • 675x675</option>
+                      <option value="1080x1350">Вертикаль (Стрічка 4:5) •
+                        1080x1350</option>
+                      <option value="1080x1920">Сторіс / Reels (9:16) •
+                        1080x1920</option>
+                      <option value="1080x566">Горизонталь (1.91:1) •
+                        1080x566</option>
+                      <option value="custom">Свій розмір...</option>
+                    </select>
+                  </div>
+
+                  <div class="flex gap-2" id="customSizeContainer"
+                    style="display: none;">
+                    <div class="w-1/2">
+                      <input type="number" id="targetWidth" placeholder="Ширина"
+                        class="w-full bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-slate-800 dark:text-zinc-100 text-sm">
+                    </div>
+                    <div class="w-1/2">
+                      <input type="number" id="targetHeight"
+                        placeholder="Висота"
+                        class="w-full bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-slate-800 dark:text-zinc-100 text-sm">
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      class="block text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">Що
+                      робити з пустотою?</label>
+                    <select id="bgMode"
+                      class="w-full bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-slate-800 dark:text-zinc-100 text-sm appearance-none mb-2">
+                      <option value="smart-smear" selected>✨ Нейро-магія (Текст
+                        виживе)</option>
+                      <option value="cover">🔥 Розтягнути жорстко (Зріже
+                        краї)</option>
+                      <option value="blur">Кольорове розмиття</option>
+                      <option value="blur-bw">Ч/Б розмиття (Кіношне)</option>
+                      <option value="echo">Ефект Ехо (Під наркозом)</option>
+                      <option value="shadow">Колір + 3D Тінь</option>
+                      <option value="gradient">Стильний Градієнт</option>
+                      <option value="color">Суцільний колір</option>
+                    </select>
+                    <div id="bgColorContainer" class="hidden">
+                      <div class="flex items-center gap-2">
+                        <input type="color" id="bgColor" value="#f8fafc"
+                          class="w-[38px] h-[38px] rounded-xl cursor-pointer bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 p-0.5 shrink-0">
+                        <div class="flex flex-wrap gap-1.5"
+                          id="bgPalette"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Жорстка унікалізація -->
+              <div
+                class="pt-4 border-t border-slate-100 dark:border-zinc-800/50">
+                <div class="flex items-start justify-between">
+                  <div class="flex flex-col pr-4">
+                    <span
+                      class="text-sm font-semibold text-violet-600 dark:text-violet-400">PRO
+                      Злам алгоритмів</span>
+                    <span
+                      class="text-[10px] md:text-xs text-slate-500 dark:text-zinc-500 mt-1 leading-relaxed">Ці
+                      штуки гарантовано зламають нейромережі модераторів.</span>
+                  </div>
+                  <input type="checkbox" id="hardUniq"
+                    class="toggle-switch mt-1">
+                </div>
+
+                <div id="hardUniqSettings"
+                  class="hidden mt-4 pt-3 border-t border-slate-100 dark:border-zinc-800/50 space-y-2 md:space-y-3">
+                  <label
+                    class="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-zinc-300 cursor-pointer hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
+                    <input type="checkbox" id="uniqRotate" checked
+                      class="w-4 h-4 accent-violet-500 cursor-pointer">
+                    Мікро-поворот (Крутимо Цукера)
+                  </label>
+                  <label
+                    class="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-zinc-300 cursor-pointer hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
+                    <input type="checkbox" id="uniqZoom" checked
+                      class="w-4 h-4 accent-violet-500 cursor-pointer">
+                    Мікро-зум (Ближче до бану... жарт)
+                  </label>
+                  <label
+                    class="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-zinc-300 cursor-pointer hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
+                    <input type="checkbox" id="uniqColor" checked
+                      class="w-4 h-4 accent-violet-500 cursor-pointer">
+                    Зсув контрасту (Сліпимо ботів)
+                  </label>
+                  <label
+                    class="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-zinc-300 cursor-pointer hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
+                    <input type="checkbox" id="uniqGrain" checked
+                      class="w-4 h-4 accent-violet-500 cursor-pointer">
+                    Плівковий шум (Як у 90-х)
+                  </label>
+                  <label
+                    class="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-zinc-300 cursor-pointer hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
+                    <input type="checkbox" id="uniqVignette"
+                      class="w-4 h-4 accent-violet-500 cursor-pointer">
+                    Віньєтка (Темні справи)
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Права колонка: Робоча зона -->
+        <div class="lg:col-span-8 flex flex-col gap-4 md:gap-5">
+
+          <!-- Зона завантаження -->
+          <div id="dropZone"
+            class="drop-zone border-2 border-dashed border-slate-300 dark:border-zinc-700 rounded-[24px] md:rounded-[32px] p-8 md:p-12 text-center cursor-pointer flex flex-col items-center justify-center min-h-[220px] md:min-h-[260px] group hover:border-violet-500 hover:bg-slate-50 dark:hover:bg-dark-surface dark:bg-transparent bg-white/50">
+            <input type="file" id="fileInput" multiple
+              accept="image/jpeg, image/png, image/webp" class="hidden">
+
+            <div
+              class="w-14 h-14 md:w-16 md:h-16 mb-4 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center group-hover:scale-110 group-hover:bg-violet-100 dark:group-hover:bg-violet-500/20 transition-all duration-300">
+              <i data-lucide="image-plus"
+                class="w-7 h-7 md:w-8 md:h-8 text-slate-400 dark:text-zinc-500 group-hover:text-violet-500"
+                stroke-width="1.5"></i>
+            </div>
+
+            <h3
+              class="text-lg md:text-xl font-bold text-slate-800 dark:text-zinc-200 mb-1.5 md:mb-2">Кидай
+              свої креоси сюди</h3>
+            <p
+              class="text-xs md:text-sm text-slate-500 dark:text-zinc-500 max-w-sm">Тягни
+              файли або клікай. Зжеремо JPG, PNG та WebP без проблем.</p>
+          </div>
+
+          <!-- Список файлів -->
+          <div id="fileListContainer"
+            class="hidden flex-col flex-grow bg-surface dark:bg-dark-surface rounded-[20px] md:rounded-[24px] p-5 md:p-6 shadow-soft dark:shadow-soft-dark border border-slate-200 dark:border-zinc-800 transition-colors">
+
+            <div
+              class="flex justify-between items-end mb-4 pb-4 border-b border-slate-100 dark:border-zinc-800/50">
+              <div>
+                <h3
+                  class="text-base md:text-lg font-bold text-slate-800 dark:text-zinc-200">Чекають
+                  на екзекуцію</h3>
+                <p
+                  class="text-[10px] md:text-xs text-slate-500 dark:text-zinc-500 mt-1">Файлів
+                  у заручниках: <span id="fileCount"
+                    class="text-violet-600 font-bold">0</span></p>
+              </div>
+              <button id="clearBtn"
+                class="text-[10px] md:text-xs font-bold text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10">
+                <i data-lucide="trash" class="w-3.5 h-3.5"></i> Звільнити всіх
+              </button>
+            </div>
+
+            <div id="fileList"
+              class="flex-grow overflow-y-auto max-h-[250px] md:max-h-[300px] space-y-2 pr-2">
+              <!-- Елементи -->
+            </div>
+
+            <!-- Панель дій -->
+            <div
+              class="mt-4 pt-4 md:mt-6 md:pt-6 border-t border-slate-100 dark:border-zinc-800/50">
+              <button id="processBtn"
+                class="w-full relative overflow-hidden group bg-slate-900 dark:bg-zinc-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-zinc-900 font-bold text-sm md:text-[15px] py-3.5 md:py-4 rounded-xl md:rounded-[16px] transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
+                <div
+                  class="absolute inset-0 bg-gradient-to-r from-violet-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <i data-lucide="sparkles"
+                  class="w-4 h-4 md:w-5 md:h-5 relative z-10 text-violet-300 dark:text-violet-600"></i>
+                <span class="relative z-10">Зламати алгоритми та показати
+                  результат 🚀</span>
+              </button>
+
+              <!-- Прогрес -->
+              <div id="progressContainer"
+                class="hidden mt-4 bg-slate-50 dark:bg-dark-bg rounded-xl md:rounded-2xl p-3 md:p-4 border border-slate-200 dark:border-zinc-800">
+                <div
+                  class="flex justify-between text-[10px] md:text-xs font-semibold text-slate-500 dark:text-zinc-500 mb-2">
+                  <span id="progressText">Шаманимо над файлами...</span>
+                  <span id="progressPercent">0%</span>
+                </div>
+                <div
+                  class="w-full bg-slate-200 dark:bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                  <div id="progressBar"
+                    class="bg-gradient-to-r from-violet-500 to-pink-500 h-full w-0 transition-all duration-300 rounded-full"></div>
+                </div>
+              </div>
+
+              <!-- Анімація Цукера під час обробки -->
+              <div id="processingAnimation"
+                class="hidden mt-6 text-center flex justify-center">
+                <div
+                  class="relative rounded-[24px] overflow-hidden border-4 border-violet-500/50 shadow-[0_0_40px_rgba(139,92,246,0.5)] bg-black w-[80%] md:w-[300px] mx-auto pointer-events-none"
+                  style="aspect-ratio: 4/5;">
+                  <div
+                    class="absolute top-1/2 left-0 w-full -translate-y-1/2 flex justify-center">
+                    <div class="tenor-gif-embed w-full"
+                      data-postid="12496739009272054031"
+                      data-share-method="host" data-aspect-ratio="0.564257"
+                      data-width="100%"><a
+                        href="https://tenor.com/view/zucking-zuckering-mark-zuckerberg-stairing-zuck-looking-zuck-gif-12496739009272054031">Zucking
+                        Zuckering GIF</a>from <a
+                        href="https://tenor.com/search/zucking-gifs">Zucking
+                        GIFs</a></div> <script type="text/javascript" async
+                      src="https://tenor.com/embed.js"></script>
+                  </div>
+                  <div class="absolute bottom-4 left-0 w-full text-center z-10">
+                    <span
+                      class="bg-black/80 text-white text-xs md:text-sm uppercase tracking-wider font-bold px-5 py-2.5 rounded-full animate-pulse border border-violet-500/50 shadow-lg">Цукер
+                      в шоці... 👀</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Блок Галереї -->
+      <div id="gallerySection"
+        class="hidden mt-6 md:mt-8 bg-surface dark:bg-dark-surface rounded-[20px] md:rounded-[24px] p-5 md:p-6 shadow-soft dark:shadow-soft-dark border border-slate-200 dark:border-zinc-800 transition-colors">
+        <div
+          class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8 pb-5 md:pb-6 border-b border-slate-100 dark:border-zinc-800">
+          <div>
+            <h2
+              class="text-xl md:text-2xl font-bold text-slate-900 dark:text-zinc-100">Ось
+              що вийшло (Цукер плаче)</h2>
+            <p
+              class="text-xs md:text-sm text-slate-500 dark:text-zinc-500 mt-1">Перевіряй
+              та забирай своє</p>
+          </div>
+          <button id="downloadZipBtn"
+            class="w-full sm:w-auto bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 text-white font-bold py-3 px-6 md:px-8 rounded-xl md:rounded-[16px] transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 hover:-translate-y-0.5">
+            <i data-lucide="download" class="w-4 h-4 md:w-5 md:h-5"></i>
+            Завантажити все (ZIP)
+          </button>
+        </div>
+
+        <div id="galleryGrid"
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          <!-- Картинки генеруються тут -->
+        </div>
+      </div>
+
+    </div>
+
+    <script>
+        function refreshIcons() {
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+        document.addEventListener('DOMContentLoaded', refreshIcons);
+
+        // Перемикання Темної/Світлої теми
+        const themeToggleBtn = document.getElementById('themeToggle');
+        themeToggleBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            if (document.documentElement.classList.contains('dark')) {
+                localStorage.theme = 'dark';
+            } else {
+                localStorage.theme = 'light';
+            }
+        });
+
+        // Елементи
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileListContainer = document.getElementById('fileListContainer');
+        const fileList = document.getElementById('fileList');
+        const fileCount = document.getElementById('fileCount');
+        const clearBtn = document.getElementById('clearBtn');
+        const processBtn = document.getElementById('processBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const progressPercent = document.getElementById('progressPercent');
+
+        const gallerySection = document.getElementById('gallerySection');
+        const galleryGrid = document.getElementById('galleryGrid');
+        const downloadZipBtn = document.getElementById('downloadZipBtn');
+
+        let selectedFiles = [];
+        let currentZip = null;
+
+        // Взаємодія з Drag & Drop
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-active');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-active'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-active');
+            handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+            fileInput.value = '';
+        });
+
+        clearBtn.addEventListener('click', () => {
+            selectedFiles = [];
+            gallerySection.classList.add('hidden');
+            galleryGrid.innerHTML = '';
+            currentZip = null;
+            updateUI();
+        });
+
+        function handleFiles(files) {
+            const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+            selectedFiles = [...selectedFiles, ...imageFiles];
+            updateUI();
+        }
+
+        function updateUI() {
+            if (selectedFiles.length > 0) {
+                fileListContainer.classList.remove('hidden');
+                fileListContainer.classList.add('flex');
+                dropZone.classList.add('hidden');
+                fileCount.textContent = selectedFiles.length;
+                
+                fileList.innerHTML = '';
+                selectedFiles.forEach((file, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'flex justify-between items-center bg-slate-50 dark:bg-dark-bg p-2 md:p-3 rounded-xl border border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors';
+                    item.innerHTML = `
+                        <div class="flex items-center gap-2 md:gap-3 overflow-hidden">
+                            <div class="w-6 h-6 md:w-8 md:h-8 rounded-lg bg-white dark:bg-zinc-800 shadow-sm border border-slate-200 dark:border-zinc-700 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="image" class="w-3 h-3 md:w-4 md:h-4 text-violet-500"></i>
+                            </div>
+                            <span class="text-xs md:text-sm font-medium text-slate-700 dark:text-zinc-300 truncate">${file.name}</span>
+                        </div>
+                        <button onclick="removeFile(${index})" class="text-slate-400 hover:text-red-500 p-1.5 md:p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+                            <i data-lucide="x" class="w-3 h-3 md:w-4 md:h-4"></i>
+                        </button>
+                    `;
+                    fileList.appendChild(item);
+                });
+                refreshIcons();
+            } else {
+                fileListContainer.classList.add('hidden');
+                fileListContainer.classList.remove('flex');
+                dropZone.classList.remove('hidden');
+            }
+        }
+
+        window.removeFile = function(index) {
+            selectedFiles.splice(index, 1);
+            updateUI();
+        }
+
+        window.downloadSingleFile = function(url, filename) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        // Логіка UI
+        const enableResize = document.getElementById('enableResize');
+        const resizeSettings = document.getElementById('resizeSettings');
+        const bgMode = document.getElementById('bgMode');
+        const bgColorContainer = document.getElementById('bgColorContainer');
+        const presetSize = document.getElementById('presetSize');
+        const customSizeContainer = document.getElementById('customSizeContainer');
+        const targetWidth = document.getElementById('targetWidth');
+        const targetHeight = document.getElementById('targetHeight');
+
+        const imageQuality = document.getElementById('imageQuality');
+        const qualityValue = document.getElementById('qualityValue');
+
+        const hardUniq = document.getElementById('hardUniq');
+        const hardUniqSettings = document.getElementById('hardUniqSettings');
+
+        const borderWidthInput = document.getElementById('borderWidth');
+        const borderMinusBtn = document.getElementById('borderMinus');
+        const borderPlusBtn = document.getElementById('borderPlus');
+
+        borderMinusBtn.addEventListener('click', () => {
+            let val = parseInt(borderWidthInput.value) || 0;
+            if (val > 0) borderWidthInput.value = val - 1;
+        });
+
+        borderPlusBtn.addEventListener('click', () => {
+            let val = parseInt(borderWidthInput.value) || 0;
+            if (val < 100) borderWidthInput.value = val + 1;
+        });
+
+        borderWidthInput.addEventListener('change', () => {
+            let val = parseInt(borderWidthInput.value) || 0;
+            if (val < 0) val = 0;
+            if (val > 100) val = 100;
+            borderWidthInput.value = val;
+        });
+
+        // Палітра 
+        const defaultColors = ['#000000', '#ffffff', '#18181b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#64748b'];
+        
+        function renderPalette(containerId, inputId) {
+            const container = document.getElementById(containerId);
+            const input = document.getElementById(inputId);
+            defaultColors.forEach(color => {
+                const btn = document.createElement('button');
+                btn.className = `w-4 h-4 md:w-5 md:h-5 rounded-full ring-1 ring-slate-300 dark:ring-zinc-700 hover:scale-125 transition-transform ${color === '#ffffff' || color === '#f8fafc' ? 'shadow-[inset_0_0_2px_rgba(0,0,0,0.1)]' : ''}`;
+                btn.style.backgroundColor = color;
+                btn.onclick = () => { input.value = color; };
+                container.appendChild(btn);
+            });
+        }
+        
+        renderPalette('borderPalette', 'borderColor');
+        renderPalette('bgPalette', 'bgColor');
+
+        imageQuality.addEventListener('input', (e) => {
+            qualityValue.textContent = `${e.target.value}%`;
+        });
+
+        enableResize.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                resizeSettings.classList.remove('hidden');
+                resizeSettings.classList.add('animate-[fadeIn_0.3s_ease-out]');
+            } else {
+                resizeSettings.classList.add('hidden');
+            }
+        });
+
+        bgMode.addEventListener('change', (e) => {
+            const needsColor = ['color', 'shadow', 'gradient'].includes(e.target.value);
+            bgColorContainer.classList.toggle('hidden', !needsColor);
+        });
+
+        presetSize.addEventListener('change', (e) => {
+            if (e.target.value === 'custom') {
+                customSizeContainer.style.display = 'flex';
+            } else {
+                customSizeContainer.style.display = 'none';
+                const [w, h] = e.target.value.split('x');
+                targetWidth.value = w;
+                targetHeight.value = h;
+            }
+        });
+        presetSize.dispatchEvent(new Event('change'));
+
+        hardUniq.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                hardUniqSettings.classList.remove('hidden');
+                hardUniqSettings.classList.add('animate-[fadeIn_0.3s_ease-out]');
+            } else {
+                hardUniqSettings.classList.add('hidden');
+            }
+        });
+
+        downloadZipBtn.addEventListener('click', async () => {
+            if (!currentZip) return;
+            const btnOriginalText = downloadZipBtn.innerHTML;
+            downloadZipBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 md:w-5 md:h-5 animate-spin"></i> Пакуємо в ZIP...';
+            downloadZipBtn.disabled = true;
+            
+            const zipContent = await currentZip.generateAsync({ type: "blob" });
+            saveAs(zipContent, "Creatives_Studio_Pack.zip");
+            
+            downloadZipBtn.innerHTML = '<i data-lucide="check" class="w-4 h-4 md:w-5 md:h-5"></i> Готово, ховай!';
+            
+            const successModal = document.getElementById('successZuckModal');
+            const successScale = document.getElementById('successZuckScale');
+            
+            successModal.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                successModal.classList.remove('opacity-0');
+                successModal.classList.add('opacity-100');
+                successScale.classList.remove('scale-50');
+                successScale.classList.add('scale-100');
+            });
+
+            setTimeout(() => {
+                // Ховаємо з анімацією
+                successModal.classList.remove('opacity-100');
+                successModal.classList.add('opacity-0');
+                successScale.classList.remove('scale-100');
+                successScale.classList.add('scale-50');
+                
+                setTimeout(() => {
+                    successModal.classList.add('hidden');
+                    downloadZipBtn.innerHTML = btnOriginalText;
+                    downloadZipBtn.disabled = false;
+                    refreshIcons();
+                }, 500); 
+            }, 3500); 
+        });
+
+        // Движок обробки
+        processBtn.addEventListener('click', async () => {
+            if (selectedFiles.length === 0) return;
+
+            const qualitySlider = parseInt(imageQuality.value);
+            let realQuality = 1.0;
+            if (qualitySlider === 100) {
+                realQuality = 1.0;
+            } else if (qualitySlider >= 50) {
+                realQuality = 0.98 + ((qualitySlider - 50) / 49) * 0.015;
+            } else {
+                realQuality = 0.85 + ((qualitySlider - 10) / 39) * 0.13;
+            }
+
+            const settings = {
+                bWidth: parseInt(document.getElementById('borderWidth').value) || 0,
+                bColor: document.getElementById('borderColor').value,
+                suffix: document.getElementById('nameSuffix').value,
+                resizeEnabled: document.getElementById('enableResize').checked,
+                targetW: parseInt(document.getElementById('targetWidth').value) || 1080,
+                targetH: parseInt(document.getElementById('targetHeight').value) || 1080,
+                bgMode: document.getElementById('bgMode').value,
+                bgColor: document.getElementById('bgColor').value,
+                format: document.getElementById('outputFormat').value,
+                quality: realQuality,
+                hardUniq: document.getElementById('hardUniq').checked,
+                uniqRotate: document.getElementById('uniqRotate').checked,
+                uniqZoom: document.getElementById('uniqZoom').checked,
+                uniqColor: document.getElementById('uniqColor').checked,
+                uniqGrain: document.getElementById('uniqGrain').checked,
+                uniqVignette: document.getElementById('uniqVignette').checked
+            };
+
+            processBtn.disabled = true;
+            processBtn.classList.add('opacity-50', 'pointer-events-none');
+            progressContainer.classList.remove('hidden');
+            
+            const animContainer = document.getElementById('processingAnimation');
+            animContainer.classList.remove('hidden');
+            
+            galleryGrid.innerHTML = '';
+            gallerySection.classList.add('hidden');
+            
+            currentZip = new JSZip();
+            let processedCount = 0;
+
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                
+                try {
+                    progressText.textContent = `Шаманимо над файлами... ${i + 1} з ${selectedFiles.length}`;
+
+                    const extIndex = file.name.lastIndexOf('.');
+                    const baseName = extIndex !== -1 ? file.name.substring(0, extIndex) : file.name;
+                    
+                    // Обробка оригінального зображення в повній якості
+                    const result = await processImage(file, settings);
+                    
+                    // Генеруємо 6-значне випадкове число для унікальності
+                    const randomNum = Math.floor(100000 + Math.random() * 900000);
+                    
+                    let cleanSuffix = settings.suffix.trim();
+                    if (cleanSuffix.startsWith('_')) cleanSuffix = cleanSuffix.substring(1);
+                    
+                    // Формуємо нову назву файлу з випадковим числом
+                    const newName = cleanSuffix ? `${baseName}_${cleanSuffix}_${randomNum}${result.extension}` : `${baseName}_${randomNum}${result.extension}`;
+                    
+                    currentZip.file(newName, result.blob);
+                    const previewUrl = URL.createObjectURL(result.blob);
+                    
+                    const card = document.createElement('div');
+                    card.className = "relative h-full w-full group/card";
+                    
+                    card.innerHTML = `
+                        <!-- Сама картка -->
+                        <div class="relative z-10 bg-white dark:bg-dark-bg border border-slate-200 dark:border-zinc-800 rounded-xl md:rounded-2xl overflow-hidden flex flex-col group hover:border-violet-400 dark:hover:border-violet-500 transition-colors shadow-sm h-full">
+                            <div class="p-2.5 md:p-3 bg-slate-50 dark:bg-[#131315] border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center shrink-0">
+                                <span class="text-[10px] md:text-xs font-semibold text-slate-600 dark:text-zinc-400 truncate pr-2" title="${newName}">${newName}</span>
+                                <span class="text-[10px] md:text-xs font-bold text-violet-600 dark:text-violet-400 shrink-0 bg-violet-100 dark:bg-violet-500/10 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md">${(result.blob.size / 1024).toFixed(1)} KB</span>
+                            </div>
+                            <div class="p-3 md:p-4 flex-grow flex items-center justify-center bg-slate-100 dark:bg-[#0d0d0e] relative overflow-hidden" style="background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 16px 16px;">
+                                <img src="${previewUrl}" class="max-h-[200px] md:max-h-[300px] w-auto object-contain rounded-lg shadow-md group-hover:scale-105 transition-transform duration-500">
+                            </div>
+                            <div class="p-2.5 md:p-3 border-t border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900/40">
+                                <button onclick="downloadSingleFile('${previewUrl}', '${newName}')" class="w-full bg-white dark:bg-zinc-800 hover:bg-violet-50 dark:hover:bg-violet-600 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:text-violet-600 dark:hover:text-white text-xs md:text-sm font-semibold py-2 rounded-lg md:rounded-[10px] transition-all flex items-center justify-center gap-2">
+                                    <i data-lucide="download" class="w-3.5 h-3.5 md:w-4 md:h-4"></i> Стягнути один
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    galleryGrid.appendChild(card);
+                    
+                } catch (error) {
+                    console.error("Помилка:", file.name, error);
+                }
+
+                processedCount++;
+                const percent = Math.round((processedCount / selectedFiles.length) * 100);
+                progressBar.style.width = `${percent}%`;
+                progressPercent.textContent = `${percent}%`;
+                
+                progressText.textContent = `Шаманимо над файлами... ${processedCount} з ${selectedFiles.length}`;
+            }
+
+            progressText.textContent = "Цукер п'є водичку, чекаємо...";
+            
+            setTimeout(() => {
+                progressContainer.classList.add('hidden');
+                document.getElementById('processingAnimation').classList.add('hidden');
+                progressBar.style.width = '0%';
+                progressPercent.textContent = '0%';
+                processBtn.disabled = false;
+                processBtn.classList.remove('opacity-50', 'pointer-events-none');
+                
+                gallerySection.classList.remove('hidden');
+                gallerySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                refreshIcons();
+            }, 4500);
+        });
+
+        // Основна функція відмальовки Canvas
+        function processImage(file, settings) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                const reader = new FileReader();
+
+                reader.onload = (e) => { img.src = e.target.result; };
+                reader.onerror = reject;
+
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    let finalWidth = img.width;
+                    let finalHeight = img.height;
+
+                    if (settings.resizeEnabled && settings.targetW > 0 && settings.targetH > 0) {
+                        finalWidth = settings.targetW;
+                        finalHeight = settings.targetH;
+                    }
+
+                    canvas.width = finalWidth;
+                    canvas.height = finalHeight;
+
+                    // 1. Попередній розрахунок координат
+                    let drawX = 0, drawY = 0, drawW = finalWidth, drawH = finalHeight;
+                    const isCover = settings.resizeEnabled && settings.bgMode === 'cover';
+
+                    if (settings.resizeEnabled) {
+                        if (isCover) {
+                            const scaleCover = Math.max(finalWidth / img.width, finalHeight / img.height);
+                            drawW = img.width * scaleCover; drawH = img.height * scaleCover;
+                            drawX = (finalWidth - drawW) / 2; drawY = (finalHeight - drawH) / 2;
+                        } else {
+                            const scaleContain = Math.min(finalWidth / img.width, finalHeight / img.height);
+                            drawW = img.width * scaleContain; drawH = img.height * scaleContain;
+                            drawX = (finalWidth - drawW) / 2; drawY = (finalHeight - drawH) / 2;
+                        }
+                    }
+
+                    // 2. Відмальовка Фону
+                    if (settings.resizeEnabled && !isCover) {
+                        if (settings.bgMode === 'smart-smear') {
+                            ctx.save();
+                            ctx.filter = 'blur(25px) brightness(0.95)';
+                            if (drawY > 0) {
+                                ctx.drawImage(img, 0, 0, img.width, 2, -10, -10, finalWidth + 20, drawY + 20);
+                                ctx.drawImage(img, 0, img.height - 2, img.width, 2, -10, drawY + drawH - 10, finalWidth + 20, finalHeight - (drawY + drawH) + 20);
+                            }
+                            if (drawX > 0) {
+                                ctx.drawImage(img, 0, 0, 2, img.height, -10, -10, drawX + 20, finalHeight + 20);
+                                ctx.drawImage(img, img.width - 2, 0, 2, img.height, drawX + drawW - 10, -10, finalWidth - (drawX + drawW) + 20, finalHeight + 20);
+                            }
+                            ctx.restore();
+                            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                            ctx.fillRect(0, 0, finalWidth, finalHeight);
+
+                        } else if (settings.bgMode === 'blur' || settings.bgMode === 'blur-bw') {
+                            const scaleCover = Math.max(finalWidth / img.width, finalHeight / img.height) * 1.1;
+                            const wCover = img.width * scaleCover; const hCover = img.height * scaleCover;
+                            const xCover = (finalWidth - wCover) / 2; const yCover = (finalHeight - hCover) / 2;
+                            
+                            ctx.filter = settings.bgMode === 'blur-bw' ? 'blur(45px) brightness(0.9) grayscale(100%)' : 'blur(45px) brightness(0.9)';
+                            ctx.drawImage(img, xCover, yCover, wCover, hCover);
+                            ctx.filter = 'none';
+                        } else if (settings.bgMode === 'echo') {
+                            const scaleCover = Math.max(finalWidth / img.width, finalHeight / img.height) * 1.5;
+                            const wCover = img.width * scaleCover; const hCover = img.height * scaleCover;
+                            const xCover = (finalWidth - wCover) / 2; const yCover = (finalHeight - hCover) / 2;
+                            
+                            ctx.filter = 'brightness(0.7) blur(3px)';
+                            ctx.drawImage(img, xCover, yCover, wCover, hCover);
+                            ctx.filter = 'none';
+                        } else if (settings.bgMode === 'gradient') {
+                            ctx.fillStyle = settings.bgColor;
+                            ctx.fillRect(0, 0, finalWidth, finalHeight);
+                            const gradOverlay = ctx.createLinearGradient(0, 0, finalWidth, finalHeight);
+                            gradOverlay.addColorStop(0, 'rgba(255,255,255,0.4)');
+                            gradOverlay.addColorStop(1, 'rgba(0,0,0,0.1)');
+                            ctx.fillStyle = gradOverlay;
+                            ctx.fillRect(0, 0, finalWidth, finalHeight);
+                        } else {
+                            ctx.fillStyle = settings.bgColor;
+                            ctx.fillRect(0, 0, finalWidth, finalHeight);
+                        }
+                    }
+
+                    ctx.save();
+                    
+                    if (settings.resizeEnabled && settings.bgMode === 'shadow') {
+                        ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                        ctx.shadowBlur = 30;
+                        ctx.shadowOffsetY = 15;
+                    }
+
+                    // 3. Жорстка унікалізація (PRO)
+                    if (settings.hardUniq) {
+                        ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
+                        
+                        if (settings.uniqRotate) {
+                            // Мікро-поворот від -0.05 до +0.05 градусів (непомітно для ока, але повністю змінює піксельну матрицю для нейромереж)
+                            const angle = (Math.random() * 0.1 - 0.05) * (Math.PI / 180);
+                            ctx.rotate(angle);
+                        }
+                        if (settings.uniqZoom) {
+                            const scale = 1.02 + (Math.random() * 0.02);
+                            ctx.scale(scale, scale);
+                        }
+                        if (settings.uniqColor) {
+                            const bright = 93 + Math.random() * 14;   
+                            const contrast = 93 + Math.random() * 14; 
+                            const saturate = 85 + Math.random() * 30; 
+                            ctx.filter = `brightness(${bright}%) contrast(${contrast}%) saturate(${saturate}%)`;
+                        }
+                        
+                        drawX = -drawW / 2;
+                        drawY = -drawH / 2;
+                    }
+
+                    ctx.drawImage(img, drawX, drawY, drawW, drawH);
+                    ctx.restore();
+
+                    // 4. PRO Накладання поверх зображення (Шум і Віньєтка)
+                    if (settings.hardUniq) {
+                        ctx.save();
+                        if (settings.uniqGrain) {
+                            const noiseCanvas = document.createElement('canvas');
+                            noiseCanvas.width = 150; noiseCanvas.height = 150;
+                            const nCtx = noiseCanvas.getContext('2d');
+                            const nData = nCtx.createImageData(150, 150);
+                            for(let i=0; i<nData.data.length; i+=4) {
+                                const v = Math.random() * 255;
+                                nData.data[i] = v; nData.data[i+1] = v; nData.data[i+2] = v;
+                                nData.data[i+3] = 25; // Легкий шум
+                            }
+                            nCtx.putImageData(nData, 0, 0);
+                            
+                            ctx.globalCompositeOperation = 'overlay';
+                            const pattern = ctx.createPattern(noiseCanvas, 'repeat');
+                            ctx.fillStyle = pattern;
+                            ctx.fillRect(0, 0, finalWidth, finalHeight);
+                        }
+
+                        if (settings.uniqVignette) {
+                            ctx.globalCompositeOperation = 'multiply';
+                            const gradient = ctx.createRadialGradient(
+                                finalWidth / 2, finalHeight / 2, finalWidth * 0.4, 
+                                finalWidth / 2, finalHeight / 2, finalWidth * 0.9
+                            );
+                            gradient.addColorStop(0, 'rgba(255,255,255,1)');
+                            gradient.addColorStop(1, 'rgba(150,150,150,1)'); // М'яка віньєтка
+                            ctx.fillStyle = gradient;
+                            ctx.fillRect(0, 0, finalWidth, finalHeight);
+                        }
+                        ctx.restore();
+                    }
+
+                    // 5. Відмальовка рамки
+                    if (settings.bWidth > 0) {
+                        ctx.lineWidth = settings.bWidth;
+                        ctx.strokeStyle = settings.bColor;
+                        ctx.strokeRect(settings.bWidth / 2, settings.bWidth / 2, finalWidth - settings.bWidth, finalHeight - settings.bWidth);
+                    }
+
+                    // 6. Мікро-шум (завжди змінює хеш)
+                    const imgData = ctx.getImageData(0, 0, finalWidth, finalHeight);
+                    const data = imgData.data;
+                    for (let i = 0; i < 400; i++) {
+                        const randomIdx = Math.floor(Math.random() * (data.length / 4)) * 4;
+                        data[randomIdx] = data[randomIdx] === 255 ? 254 : data[randomIdx] + 1;
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+
+                    // 7. Експорт
+                    let mimeType = file.type;
+                    let extension = '';
+                    
+                    if (mimeType === 'image/png') {
+                        extension = '.png';
+                    } else if (mimeType === 'image/webp') {
+                        extension = '.webp';
+                    } else {
+                        mimeType = 'image/jpeg';
+                        extension = '.jpg';
+                    }
+
+                    if (settings.format !== 'auto') {
+                        mimeType = settings.format;
+                        extension = settings.format === 'image/png' ? '.png' : (settings.format === 'image/webp' ? '.webp' : '.jpg');
+                    }
+
+                    canvas.toBlob((blob) => {
+                        resolve({ blob, extension });
+                    }, mimeType, settings.quality);
+                };
+
+                reader.readAsDataURL(file);
+            });
+        }
+    </script>
+  </body>
+</html>
