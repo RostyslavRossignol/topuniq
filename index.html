@@ -8,28 +8,29 @@
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-
     gtag('config', 'G-S9BZDL4LZZ');
     </script>
     <meta charset="UTF-8">
     <meta name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Сліпий Цукер Pro | Анти-бан креативів</title>
-    <!-- Прикольный SVG Фавикон (Обезьянка, которая ничего не видит) -->
     <link rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🙈</text></svg>">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <!-- Підключаємо OpenCV.js для професійного Inpainting -->
+    <script async src="https://docs.opencv.org/4.8.0/opencv.js"
+      type="text/javascript"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet">
 
     <script>
-        // Перевірка збереженої теми
         if (localStorage.theme === 'light') {
             document.documentElement.classList.remove('dark');
         } else {
@@ -65,6 +66,7 @@
             }
         }
     </script>
+
     <style>
         body { 
             -webkit-font-smoothing: antialiased;
@@ -78,14 +80,13 @@
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .dark ::-webkit-scrollbar-thumb:hover { background: #71717a; }
 
-        /* Перемикачі */
         .toggle-switch {
             appearance: none;
             width: 44px;
-            min-width: 44px; /* Забороняємо звуження тумблера */
+            min-width: 44px;
             height: 24px;
-            min-height: 24px; /* Забороняємо звуження тумблера */
-            flex-shrink: 0; /* Щоб flexbox не ламав розмір */
+            min-height: 24px;
+            flex-shrink: 0;
             border-radius: 24px;
             position: relative;
             cursor: pointer;
@@ -114,7 +115,6 @@
             transform: translateX(20px);
         }
 
-        /* Інпути */
         input[type="number"], input[type="text"], select {
             transition: all 0.2s;
         }
@@ -130,7 +130,6 @@
             }
         }
         
-        /* Зона завантаження */
         .drop-zone {
             transition: all 0.3s ease;
         }
@@ -154,7 +153,6 @@
             -moz-appearance: textfield; 
         }
 
-        /* Тултипи (Підказки) */
         .tooltip-container {
             position: relative;
             display: inline-flex;
@@ -171,7 +169,7 @@
             width: max-content;
             max-width: 240px;
             padding: 10px 14px;
-            background-color: #1e293b; /* dark slate */
+            background-color: #1e293b; 
             color: #f8fafc;
             font-size: 12px;
             font-weight: 500;
@@ -192,7 +190,6 @@
             border: 1px solid rgba(0,0,0,0.1);
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
         }
-        /* Трикутничок знизу тултипу */
         .tooltip-container .tooltip-text::after {
             content: '';
             position: absolute;
@@ -211,12 +208,136 @@
             visibility: visible;
             transform: translateX(-50%) translateY(0);
         }
+
+        .rainbow-btn {
+            background: conic-gradient(from 180deg, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #8b5cf6, #ec4899, #ef4444);
+        }
+        
+        #eraserPreviewCanvas {
+            cursor: crosshair;
+            touch-action: none;
+        }
+        #watermarkPreviewCanvas {
+            cursor: crosshair;
+            touch-action: none;
+        }
     </style>
   </head>
   <body
     class="min-h-screen p-3 md:p-8 font-sans bg-bgbase text-slate-900 dark:bg-dark-bg dark:text-zinc-100">
 
-    <!-- Переможна анімація після завантаження ZIP -->
+    <div id="toastContainer"
+      class="fixed bottom-5 right-5 z-[500] flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- FAQ Modal -->
+    <div id="faqModal"
+      class="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0 hidden">
+      <div
+        class="bg-surface dark:bg-dark-surface rounded-[24px] shadow-2xl border border-slate-200 dark:border-zinc-800 w-full max-w-2xl max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300"
+        id="faqModalContent">
+        <div
+          class="flex justify-between items-center p-5 md:p-6 border-b border-slate-100 dark:border-zinc-800 shrink-0">
+          <h2
+            class="text-xl md:text-2xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+            <span class="text-2xl">🙈</span> FAQ: Що вміє цей монстр?
+          </h2>
+          <button id="closeFaqBtn"
+            class="text-slate-400 hover:text-red-500 transition-colors bg-slate-100 dark:bg-zinc-800 hover:bg-red-50 dark:hover:bg-red-500/10 p-2 rounded-xl">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <div
+          class="p-5 md:p-6 overflow-y-auto space-y-6 text-sm md:text-base text-slate-600 dark:text-zinc-300">
+          <div
+            class="bg-gradient-to-r from-violet-500/10 to-pink-500/10 border border-violet-200 dark:border-violet-500/20 p-5 rounded-2xl">
+            <h3
+              class="font-bold text-violet-800 dark:text-violet-300 mb-2 flex items-center gap-2">
+              <i data-lucide="layers" class="w-5 h-5"></i> Головна перевага:
+              МАСОВА обробка
+            </h3>
+            <p
+              class="text-violet-900/80 dark:text-violet-200/80 leading-relaxed">
+              Забудь про обробку по одному файлу! Наш сервіс унікальний тим, що
+              ти можеш закинути сюди <strong>хоч 50 photo або до 10 відео
+                одночасно</strong>. Налаштовуєш параметри один раз, тиснеш
+              кнопку — і забираєш готовий ZIP-архів з усіма унікалізованими
+              креативами.
+            </p>
+          </div>
+          <div>
+            <h3
+              class="font-bold text-slate-800 dark:text-zinc-100 mb-2 flex items-center gap-1.5">
+              <i data-lucide="fingerprint" class="w-5 h-5 text-pink-500"></i>
+              Глибока зміна (Мета-теги та Хеші)
+            </h3>
+            <p class="leading-relaxed">
+              Ми не просто накладаємо фільтри. Сервіс <strong>повністю переписує
+                хеші, стирає старі мета-теги та генерує новий бінарний
+                код</strong> як для зображень, так і для відео. Для нейромереж
+              Facebook, Google чи TikTok це виглядає як абсолютно новий файл,
+              знятий щойно на нову камеру.
+            </p>
+          </div>
+          <div>
+            <h3
+              class="font-bold text-slate-800 dark:text-zinc-100 mb-3 flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-5 h-5 text-yellow-500"></i>
+              Топовий арсенал фічей
+            </h3>
+            <ul class="space-y-3">
+              <li class="flex items-start gap-2">
+                <i data-lucide="check-circle-2"
+                  class="w-5 h-5 text-green-500 shrink-0 mt-0.5"></i>
+                <span><strong>Додавання картинок в кінець відео
+                    (Хвіст):</strong> Подовжує відео на обраний час (від 15 сек
+                  до 3 хв). Є готові пресети (ліс, океан, тварини) або можна
+                  завантажити своє фото. Змінює хронометраж до
+                  невпізнання!</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <i data-lucide="check-circle-2"
+                  class="w-5 h-5 text-green-500 shrink-0 mt-0.5"></i>
+                <span><strong>Багатошарові рамки (до 5 шт):</strong> Додавай до
+                  5 рамок різних кольорів та форм (хвилясті, зигзаг, пунктир)
+                  одночасно. Зображення при цьому автоматично стискається
+                  всередину і <em>ніколи не обрізається</em>. В палітрі є
+                  райдужний градієнт!</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <i data-lucide="check-circle-2"
+                  class="w-5 h-5 text-green-500 shrink-0 mt-0.5"></i>
+                <span><strong>Майстер-Гумка та Вотермарка:</strong> Можна стерти
+                  чужий логотип розумним розмиттям або математичним заповненням,
+                  чи накласти свій PNG-логотип поверх усього пакунку
+                  креативів.</span>
+              </li>
+            </ul>
+          </div>
+          <div
+            class="bg-slate-50 dark:bg-zinc-800/50 p-4 rounded-xl border border-slate-200 dark:border-zinc-700">
+            <h3
+              class="font-bold text-slate-800 dark:text-zinc-100 mb-1 flex items-center gap-1.5">
+              <i data-lucide="info" class="w-4 h-4 text-sky-500"></i> Читайте
+              підказочки!
+            </h3>
+            <p class="text-sm">Біля кожного налаштування є маленька іконка знаку
+              питання <i data-lucide="circle-help"
+                class="w-3.5 h-3.5 inline-block text-slate-400"></i>.
+              Обов'язково наводьте на неї курсор — там детально пояснено, як
+              саме кожна функція допомагає обходити бани.</p>
+          </div>
+        </div>
+        <div
+          class="p-5 md:p-6 border-t border-slate-100 dark:border-zinc-800 flex justify-end shrink-0">
+          <button id="understandFaqBtn"
+            class="bg-slate-900 dark:bg-zinc-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-zinc-900 font-bold py-3 px-8 rounded-xl transition-all shadow-md hover:shadow-lg">
+            Зрозуміло, до роботи! 🚀
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success Zuck Modal -->
     <div id="successZuckModal"
       class="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-500 bg-black/60 backdrop-blur-sm hidden">
       <div
@@ -232,8 +353,120 @@
       </div>
     </div>
 
+    <!-- Eraser Modal -->
+    <div id="eraserModal"
+      class="fixed inset-0 z-[400] flex flex-col items-center justify-center p-4 bg-black/90 backdrop-blur-md transition-opacity duration-300 opacity-0 hidden">
+      <div
+        class="bg-surface dark:bg-dark-surface rounded-[24px] shadow-2xl border border-slate-200 dark:border-zinc-800 w-full max-w-5xl flex flex-col h-full max-h-[90vh]">
+        <div
+          class="flex justify-between items-center p-4 border-b border-slate-100 dark:border-zinc-800 shrink-0">
+          <h2
+            class="text-lg md:text-xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+            <i data-lucide="eraser" class="text-teal-500"></i> Замалюйте логотип
+          </h2>
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+              <label
+                class="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wide">Пензель</label>
+              <input type="range" id="eraserSize" min="10" max="100" value="30"
+                class="w-24 h-1.5 bg-slate-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-teal-500">
+            </div>
+            <button id="clearEraserBtn"
+              class="text-xs font-bold text-slate-500 hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
+              Очистити
+            </button>
+            <button id="closeEraserBtn"
+              class="text-slate-400 hover:text-red-500 transition-colors bg-slate-100 dark:bg-zinc-800 hover:bg-red-50 dark:hover:bg-red-500/10 p-2 rounded-xl">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+
+        <div
+          class="p-4 flex-grow overflow-auto flex items-center justify-center bg-slate-100 dark:bg-[#0d0d0e] relative"
+          style="background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 16px 16px;">
+          <canvas id="eraserPreviewCanvas"
+            class="max-w-full max-h-full rounded-xl shadow-lg border border-slate-300 dark:border-zinc-700"></canvas>
+        </div>
+
+        <div
+          class="p-4 border-t border-slate-100 dark:border-zinc-800 flex justify-between items-center shrink-0">
+          <p class="text-xs text-slate-500 dark:text-zinc-400">Ця маска буде
+            автоматично застосована <br class="md:hidden">до всіх <strong><span
+                id="eraserFilesCount">0</span></strong> файлів.</p>
+          <button id="saveEraserBtn"
+            class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i> Готово,
+            застосувати
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Watermark Modal (LIVE PREVIEW) -->
+    <div id="watermarkModal"
+      class="fixed inset-0 z-[400] flex flex-col items-center justify-center p-4 bg-black/90 backdrop-blur-md transition-opacity duration-300 opacity-0 hidden">
+      <div
+        class="bg-surface dark:bg-dark-surface rounded-[24px] shadow-2xl border border-slate-200 dark:border-zinc-800 w-full max-w-5xl flex flex-col h-full max-h-[90vh]">
+        <div
+          class="flex justify-between items-center p-4 border-b border-slate-100 dark:border-zinc-800 shrink-0">
+          <h2
+            class="text-lg md:text-xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+            <i data-lucide="target" class="text-indigo-500"></i> Розташуйте свій
+            логотип
+          </h2>
+          <div class="flex items-center gap-4">
+            <button id="closeWatermarkModalBtn"
+              class="text-slate-400 hover:text-red-500 transition-colors bg-slate-100 dark:bg-zinc-800 hover:bg-red-50 dark:hover:bg-red-500/10 p-2 rounded-xl">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+
+        <div
+          class="p-4 flex-grow overflow-auto flex items-center justify-center bg-slate-100 dark:bg-[#0d0d0e] relative"
+          style="background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 16px 16px;">
+          <canvas id="watermarkPreviewCanvas"
+            class="max-w-full max-h-full rounded-xl shadow-lg border border-slate-300 dark:border-zinc-700"></canvas>
+        </div>
+
+        <!-- Інтерактивні повзунки безпосередньо в модальному вікні -->
+        <div
+          class="px-6 py-3.5 border-t border-slate-100 dark:border-zinc-800 flex flex-wrap gap-6 items-center justify-center sm:justify-between bg-slate-50 dark:bg-zinc-900/40 shrink-0">
+          <div class="flex items-center gap-2.5 w-full sm:w-auto">
+            <span
+              class="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wide">Розмір:</span>
+            <input type="range" id="modalWatermarkScale" min="5" max="100"
+              value="25"
+              class="w-28 md:w-36 h-1.5 bg-slate-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+            <span id="modalWatermarkScaleVal"
+              class="text-xs font-bold text-indigo-500">25%</span>
+          </div>
+          <div class="flex items-center gap-2.5 w-full sm:w-auto">
+            <span
+              class="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wide">Прозорість:</span>
+            <input type="range" id="modalWatermarkOpacity" min="10" max="100"
+              value="90"
+              class="w-28 md:w-36 h-1.5 bg-slate-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+            <span id="modalWatermarkOpacityVal"
+              class="text-xs font-bold text-indigo-500">90%</span>
+          </div>
+        </div>
+
+        <div
+          class="p-4 border-t border-slate-100 dark:border-zinc-800 flex justify-between items-center shrink-0">
+          <p class="text-xs text-slate-500 dark:text-zinc-400">Клікніть на
+            зображенні, щоб <br class="md:hidden">зафіксувати логотип.</p>
+          <button id="saveWatermarkPosBtn"
+            class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i> Зберегти
+            позицію
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="max-w-[1200px] mx-auto">
-      <!-- Пасхалка: Цукер виглядає зверху -->
       <div class="flex justify-center -mb-8 md:-mb-10 relative z-0 pt-4"
         title="Цукер стежить за тобою...">
         <div
@@ -244,7 +477,6 @@
         </div>
       </div>
 
-      <!-- Шапка -->
       <header
         class="relative z-10 mb-6 md:mb-8 flex items-center justify-between gap-4 bg-surface dark:bg-dark-surface p-4 rounded-2xl md:rounded-[24px] shadow-soft dark:shadow-soft-dark border border-slate-200 dark:border-zinc-800 transition-colors">
         <div class="flex items-center gap-3">
@@ -263,20 +495,24 @@
           </div>
         </div>
 
-        <!-- Кнопка перемикання теми -->
-        <button id="themeToggle"
-          class="p-2.5 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors"
-          title="Перемкнути тему">
-          <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
-          <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
-        </button>
+        <div class="flex items-center gap-2 md:gap-3">
+          <button id="openFaqBtn"
+            class="px-3 md:px-4 py-2.5 rounded-xl bg-violet-100 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-200 dark:hover:bg-violet-500/20 transition-colors font-bold text-xs md:text-sm flex items-center gap-1.5 border border-transparent dark:border-violet-500/20">
+            <i data-lucide="book-open" class="w-4 h-4 md:w-5 md:h-5"></i>
+            <span class="hidden sm:inline">Як це працює?</span>
+          </button>
+
+          <button id="themeToggle"
+            class="p-2.5 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors"
+            title="Перемкнути тему">
+            <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
+            <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+          </button>
+        </div>
       </header>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
-
-        <!-- Ліва колонка: Налаштування -->
         <div class="lg:col-span-4 flex flex-col gap-4 md:gap-5">
-
           <!-- Блок 1: Базові налаштування -->
           <div
             class="bg-surface dark:bg-dark-surface rounded-[20px] md:rounded-[24px] p-5 md:p-6 shadow-soft dark:shadow-soft-dark border border-slate-200 dark:border-zinc-800 transition-colors">
@@ -287,55 +523,30 @@
             </h2>
 
             <div class="space-y-4 md:space-y-5">
-              <div class="flex gap-3">
-                <div class="w-1/2">
-                  <label
-                    class="flex items-center text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">
-                    Рамка (відлякувач), px
-                    <span class="tooltip-container">
-                      <i data-lucide="circle-help"
-                        class="w-3.5 h-3.5 text-slate-400 hover:text-violet-500 transition-colors"></i>
-                      <span class="tooltip-text whitespace-normal w-56">Додає
-                        рамку навколо крео. Штучний інтелект ФБ сканує краї і
-                        бачить нові пікселі. Бінго — для нього це унікальна
-                        картинка!</span>
-                    </span>
-                  </label>
-                  <div
-                    class="flex items-center bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/30 focus-within:border-violet-500 transition-all shadow-sm">
-                    <button type="button" id="borderMinus"
-                      class="w-12 h-[42px] flex items-center justify-center text-slate-500 hover:text-violet-600 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shrink-0 border-r border-slate-200 dark:border-zinc-800">
-                      <i data-lucide="minus" class="w-5 h-5"></i>
-                    </button>
-                    <input type="number" id="borderWidth" value="0" min="0"
-                      max="100"
-                      class="w-full h-[42px] bg-transparent text-center text-slate-800 dark:text-zinc-100 text-base font-bold outline-none border-none p-0 focus:ring-0"
-                      style="box-shadow: none;">
-                    <button type="button" id="borderPlus"
-                      class="w-12 h-[42px] flex items-center justify-center text-slate-500 hover:text-violet-600 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shrink-0 border-l border-slate-200 dark:border-zinc-800">
-                      <i data-lucide="plus" class="w-5 h-5"></i>
-                    </button>
-                  </div>
+
+              <!-- НАЛАШТУВАННЯ БАГАТОШАРОВИХ РАМОК -->
+              <div>
+                <label
+                  class="flex items-center text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-2">
+                  Шари рамок (відлякувач ботів)
+                  <span class="tooltip-container">
+                    <i data-lucide="circle-help"
+                      class="w-3.5 h-3.5 text-slate-400 hover:text-violet-500 transition-colors"></i>
+                    <span class="tooltip-text whitespace-normal w-56">Додавай до
+                      5 рамок різних кольорів. Зображення при цьому стискається
+                      всередину і не зрізається!</span>
+                  </span>
+                </label>
+
+                <div id="bordersList" class="space-y-2 mb-3">
+                  <!-- Динамічний контент рамок -->
                 </div>
-                <div class="w-1/2">
-                  <label
-                    class="flex items-center text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">
-                    Колір рамки
-                    <span class="tooltip-container">
-                      <i data-lucide="circle-help"
-                        class="w-3.5 h-3.5 text-slate-400 hover:text-violet-500 transition-colors"></i>
-                      <span class="tooltip-text whitespace-normal w-56">Зливай з
-                        фоном для непомітності або роби кислотним для уваги
-                        юзерів. Цукеру байдуже, аби код кольору змінився.</span>
-                    </span>
-                  </label>
-                  <div class="flex items-center gap-2">
-                    <input type="color" id="borderColor" value="#000000"
-                      class="w-[42px] h-[42px] rounded-xl cursor-pointer bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 p-0.5 shrink-0 shadow-sm">
-                    <div class="flex flex-wrap gap-1.5"
-                      id="borderPalette"></div>
-                  </div>
-                </div>
+
+                <button id="addBorderBtn"
+                  class="w-full py-2.5 border border-dashed border-slate-300 dark:border-zinc-700 hover:border-violet-500 text-slate-500 hover:text-violet-500 dark:text-zinc-400 dark:hover:text-violet-400 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i> Додати рамку
+                  (макс. 5)
+                </button>
               </div>
 
               <div>
@@ -363,15 +574,18 @@
                     <i data-lucide="circle-help"
                       class="w-3.5 h-3.5 text-slate-400 hover:text-violet-500 transition-colors"></i>
                     <span class="tooltip-text whitespace-normal w-56">Зміна
-                      формату повністю переписує двійковий код файлу. Топовий
-                      метод відходу від алгоритмів бану.</span>
+                      формату повністю переписує двійковий код файлу. Для відео
+                      — перепаковує у WebM або MP4. Це один з найсильніших
+                      методів унікалізації.</span>
                   </span>
                 </label>
                 <select id="outputFormat"
                   class="w-full bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-slate-800 dark:text-zinc-100 text-sm appearance-none">
                   <option value="auto">Не чіпати рідний</option>
-                  <option value="image/jpeg">JPEG (Швидкий та легкий)</option>
-                  <option value="image/png">PNG (Важкий, без втрат)</option>
+                  <option value="image/jpeg">JPEG (Фото: Швидкий та
+                    легкий)</option>
+                  <option value="image/png">PNG (Фото: Важкий, без
+                    втрат)</option>
                 </select>
               </div>
 
@@ -384,21 +598,19 @@
                       <span class="tooltip-container">
                         <i data-lucide="circle-help"
                           class="w-3.5 h-3.5 text-slate-400 hover:text-violet-500 transition-colors"></i>
-                        <span class="tooltip-text whitespace-normal w-56">Навіть
-                          зміна якості з 100% на 99% кардинально змінює вагу
-                          файлу і структуру пікселів. Непомітно для ока,
-                          смертельно для модераторів.</span>
+                        <span class="tooltip-text whitespace-normal w-56">Щоб
+                          компенсувати додавання рамок і не роздувати вагу
+                          файлу, скрипт автоматично калібрує стиснення.
+                          Рекомендовано 80% — ідеальний баланс ваги і
+                          якості.</span>
                       </span>
                     </label>
-                    <span
-                      class="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">PNG
-                      на дієту не сідає 🍔 (тільки JPEG)</span>
                   </div>
                   <span id="qualityValue"
-                    class="text-xs font-bold text-violet-500 mt-0.5">100%</span>
+                    class="text-xs font-bold text-violet-500 mt-0.5">80%</span>
                 </div>
                 <input type="range" id="imageQuality" min="10" max="100"
-                  value="100"
+                  value="80"
                   class="w-full h-1.5 bg-slate-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-violet-500 mt-1">
               </div>
             </div>
@@ -414,7 +626,96 @@
             </h2>
 
             <div class="space-y-5 md:space-y-6">
-              <!-- Адаптація -->
+
+              <!-- БЛОК: МАЙСТЕР-ГУМКА -->
+              <div
+                class="pb-4 border-b border-slate-100 dark:border-zinc-800/50">
+                <div class="flex items-start justify-between mb-3">
+                  <div class="flex flex-col pr-4">
+                    <span
+                      class="flex items-center text-sm font-semibold text-teal-600 dark:text-teal-400">
+                      🧽 Майстер-Гумка (Вотермарки)
+                      <span class="tooltip-container">
+                        <i data-lucide="circle-help"
+                          class="w-3.5 h-3.5 text-slate-400 hover:text-teal-500 transition-colors"></i>
+                        <span
+                          class="tooltip-text whitespace-normal w-56">Замалюйте
+                          логотип чи текст на одному файлі, і ми автоматично
+                          затремо його (за допомогою алгоритму відновлення
+                          OpenCV) на всіх 50 фото чи відео!</span>
+                      </span>
+                    </span>
+                    <span
+                      class="text-[10px] md:text-xs text-slate-500 dark:text-zinc-400 mt-0.5">Стерти
+                      зайве на всіх файлах одразу</span>
+                  </div>
+                  <input type="checkbox" id="enableEraser"
+                    class="toggle-switch mt-1">
+                </div>
+
+                <div id="eraserSettings" class="hidden mt-3 space-y-3">
+                  <div>
+                    <label
+                      class="block text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mb-1.5 uppercase">Режим
+                      видалення</label>
+                    <select id="eraserMode"
+                      class="w-full h-[38px] bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 rounded-xl px-3 text-slate-800 dark:text-zinc-100 text-xs font-semibold appearance-none shadow-sm focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 outline-none transition-all">
+                      <option value="inpaint" selected>✨ Розумне відновлення
+                        (OpenCV)</option>
+                      <option value="blur">💧 Розмиття (Блюр-пляма)</option>
+                    </select>
+                  </div>
+                  <button id="openEraserBtn"
+                    class="w-full py-2.5 bg-teal-50 hover:bg-teal-100 dark:bg-teal-500/10 dark:hover:bg-teal-500/20 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                    <i data-lucide="paintbrush" class="w-4 h-4"></i> Вказати
+                    зону для стирання
+                  </button>
+                  <p id="eraserStatusText"
+                    class="text-[10px] text-center text-slate-400 dark:text-zinc-500 mt-2 hidden">Маску
+                    збережено. Буде застосовано до всіх файлів.</p>
+                </div>
+              </div>
+
+              <!-- БЛОК: ВОТЕРМАРКА -->
+              <div
+                class="pb-4 border-b border-slate-100 dark:border-zinc-800/50">
+                <div class="flex items-start justify-between mb-3">
+                  <div class="flex flex-col pr-4">
+                    <span
+                      class="flex items-center text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                      ⭐ Накласти Лого / PNG
+                      <span class="tooltip-container">
+                        <i data-lucide="circle-help"
+                          class="w-3.5 h-3.5 text-slate-400 hover:text-indigo-500 transition-colors"></i>
+                        <span
+                          class="tooltip-text whitespace-normal w-56">Завантаж
+                          свій логотип з прозорим фоном, і він автоматично
+                          накладеться на всі відео та фото в пачці!</span>
+                      </span>
+                    </span>
+                    <span
+                      class="text-[10px] md:text-xs text-slate-500 dark:text-zinc-400 mt-0.5">Своя
+                      вотермарка на всіх файлах</span>
+                  </div>
+                  <input type="checkbox" id="enableWatermark"
+                    class="toggle-switch mt-1">
+                </div>
+
+                <div id="watermarkSettings" class="hidden mt-3 space-y-3">
+                  <input type="file" id="watermarkFileInput" accept="image/png"
+                    class="w-full text-xs md:text-sm text-slate-500 dark:text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-500/10 dark:file:text-indigo-400 cursor-pointer mb-2">
+
+                  <button id="openWatermarkBtn" disabled
+                    class="w-full py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-2">
+                    <i data-lucide="target" class="w-4 h-4"></i> Вказати місце
+                    на екрані
+                  </button>
+                  <p id="watermarkStatusText"
+                    class="text-[10px] text-center text-slate-400 dark:text-zinc-500 mt-2 hidden">Логотип
+                    зафіксовано!</p>
+                </div>
+              </div>
+
               <div>
                 <div class="flex items-center justify-between mb-3">
                   <div class="flex flex-col pr-4">
@@ -426,9 +727,9 @@
                           class="w-3.5 h-3.5 text-slate-400 hover:text-violet-500 transition-colors"></i>
                         <span
                           class="tooltip-text whitespace-normal w-56">Дозволяє
-                          ідеально підігнати квадратний креатив під Stories або
-                          просто зламати старі розміри, щоб піксельна сітка
-                          з'їхала і стала унікальною.</span>
+                          ідеально підігнати креатив під Stories або зламати
+                          старі розміри. Зображення завжди залишається у межах
+                          встановленого розміру (навіть з рамками).</span>
                       </span>
                     </span>
                     <span
@@ -445,14 +746,6 @@
                     <label
                       class="flex items-center text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">
                       Формат
-                      <span class="tooltip-container">
-                        <i data-lucide="circle-help"
-                          class="w-3.5 h-3.5 text-slate-400 hover:text-violet-500 transition-colors"></i>
-                        <span class="tooltip-text whitespace-normal w-56">Готові
-                          шаблони пропорцій під усі основні плейсменти у
-                          FB/Insta. Не треба гуглити точні пікселі, ми все
-                          зробили.</span>
-                      </span>
                     </label>
                     <select id="presetSize"
                       class="w-full bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-slate-800 dark:text-zinc-100 text-sm appearance-none">
@@ -486,14 +779,6 @@
                     <label
                       class="flex items-center text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">
                       Що робити з пустотою?
-                      <span class="tooltip-container">
-                        <i data-lucide="circle-help"
-                          class="w-3.5 h-3.5 text-slate-400 hover:text-violet-500 transition-colors"></i>
-                        <span class="tooltip-text whitespace-normal w-56">Коли
-                          міняєш пропорції, може залишитись пусте місце. Тут
-                          можна вибрати, як його красиво (або жорстко)
-                          заповнити, щоб крео виглядало топ.</span>
-                      </span>
                     </label>
                     <select id="bgMode"
                       class="w-full bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-slate-800 dark:text-zinc-100 text-sm appearance-none mb-2">
@@ -520,7 +805,78 @@
                 </div>
               </div>
 
-              <!-- Жорстка унікалізація -->
+              <!-- БЛОК: ПОДОВЖЕННЯ ВІДЕО -->
+              <div
+                class="pt-4 border-t border-slate-100 dark:border-zinc-800/50">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex flex-col pr-4">
+                    <span
+                      class="flex items-center text-sm font-semibold text-sky-600 dark:text-sky-400">
+                      📹 Відео: Подовження (Хвіст)
+                      <span class="tooltip-container">
+                        <i data-lucide="circle-help"
+                          class="w-3.5 h-3.5 text-slate-400 hover:text-sky-500 transition-colors"></i>
+                        <span class="tooltip-text whitespace-normal w-56">Додає
+                          в кінець відео статичну картинку на заданий час.
+                          Сильно змінює загальну тривалість відео, що є потужним
+                          сигналом "нового контенту" для ботів. Звук при цьому
+                          плавно затихає.</span>
+                      </span>
+                    </span>
+                    <span
+                      class="text-[10px] md:text-xs text-slate-500 dark:text-zinc-400 mt-0.5">Змінює
+                      хронометраж до невпізнання</span>
+                  </div>
+                  <input type="checkbox" id="enableEndSlate"
+                    class="toggle-switch">
+                </div>
+
+                <div id="endSlateSettings"
+                  class="hidden space-y-3 mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800/50">
+                  <div class="flex gap-3">
+                    <div class="w-1/3">
+                      <label
+                        class="flex items-center text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">Тривалість</label>
+                      <select id="endSlateDuration"
+                        class="w-full bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-slate-800 dark:text-zinc-100 text-sm appearance-none">
+                        <option value="15">15 сек</option>
+                        <option value="30">30 сек</option>
+                        <option value="45">45 сек</option>
+                        <option value="60">1 хв</option>
+                        <option value="120">2 хв</option>
+                        <option value="180">3 хв</option>
+                      </select>
+                    </div>
+                    <div class="w-2/3">
+                      <label
+                        class="flex items-center text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">Що
+                        показуємо?</label>
+                      <select id="endSlateType"
+                        class="w-full bg-input dark:bg-dark-input border border-slate-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-slate-800 dark:text-zinc-100 text-sm appearance-none">
+                        <option value="preset-girl">😊 Позитивна дівчина (Have a
+                          good day)</option>
+                        <option value="preset-ocean">🌊 Релакс Океан
+                          (Спокій)</option>
+                        <option value="preset-forest">🌲 Магічний Ліс
+                          (Природа)</option>
+                        <option value="preset-animal">🐶 Милий Песик
+                          (Радість)</option>
+                        <option value="preset-sunset">✨ Захід Сонця
+                          (Естетика)</option>
+                        <option value="custom">🖼️ Завантажити свою
+                          картинку...</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div id="customEndSlateContainer" class="hidden">
+                    <input type="file" id="customEndSlateFile"
+                      accept="image/jpeg, image/png"
+                      class="w-full text-xs md:text-sm text-slate-500 dark:text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100 dark:file:bg-violet-500/10 dark:file:text-violet-400 cursor-pointer">
+                  </div>
+                </div>
+              </div>
+
               <div
                 class="pt-4 border-t border-slate-100 dark:border-zinc-800/50">
                 <div class="flex items-start justify-between">
@@ -528,19 +884,11 @@
                     <span
                       class="flex items-center text-sm font-semibold text-violet-600 dark:text-violet-400">
                       PRO Злам алгоритмів
-                      <span class="tooltip-container">
-                        <i data-lucide="circle-help"
-                          class="w-4 h-4 text-violet-400 hover:text-violet-600 transition-colors"></i>
-                        <span
-                          class="tooltip-text whitespace-normal w-56">Комплексна
-                          м'ясорубка. Перетворює крео на 'генетичного мутанта',
-                          якого не впізнає жоден бот-сканер, зберігаючи картинку
-                          ідеальною для людей.</span>
-                      </span>
                     </span>
                     <span
                       class="text-[10px] md:text-xs text-slate-500 dark:text-zinc-500 mt-1 leading-relaxed">Ці
-                      штуки гарантовано зламають нейромережі модераторів.</span>
+                      штуки гарантовано зламають нейромережі модераторів (Фото
+                      та Відео).</span>
                   </div>
                   <input type="checkbox" id="hardUniq"
                     class="toggle-switch mt-1">
@@ -552,85 +900,36 @@
                     class="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-zinc-300 cursor-pointer hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
                     <input type="checkbox" id="uniqRotate" checked
                       class="w-4 h-4 accent-violet-500 cursor-pointer">
-                    <span class="flex items-center">
-                      Мікро-поворот (Крутимо Цукера)
-                      <span class="tooltip-container">
-                        <i data-lucide="circle-help"
-                          class="w-3.5 h-3.5 text-slate-400 hover:text-violet-500 transition-colors"></i>
-                        <span
-                          class="tooltip-text whitespace-normal w-56">Повертає
-                          креос на долі градуса. Око юзера не помітить, а
-                          матриця координат пікселів для бота оновиться на всі
-                          100%.</span>
-                      </span>
-                    </span>
+                    <span class="flex items-center">Мікро-поворот (Крутимо
+                      Цукера)</span>
                   </label>
                   <label
                     class="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-zinc-300 cursor-pointer hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
                     <input type="checkbox" id="uniqZoom" checked
                       class="w-4 h-4 accent-violet-500 cursor-pointer">
-                    <span class="flex items-center">
-                      Мікро-зум (Ближче до бану... жарт)
-                      <span class="tooltip-container">
-                        <i data-lucide="circle-help"
-                          class="w-3.5 h-3.5 text-slate-400 hover:text-violet-500 transition-colors"></i>
-                        <span
-                          class="tooltip-text whitespace-normal w-56">Мікро-збільшення
-                          масштабу. Трохи обрізає краї та змінює геометрію
-                          об'єктів (облич, текстів), ускладнюючи їх
-                          розпізнавання.</span>
-                      </span>
-                    </span>
+                    <span class="flex items-center">Мікро-зум (Ближче до бану...
+                      жарт)</span>
                   </label>
                   <label
                     class="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-zinc-300 cursor-pointer hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
                     <input type="checkbox" id="uniqColor" checked
                       class="w-4 h-4 accent-violet-500 cursor-pointer">
-                    <span class="flex items-center">
-                      Зсув контрасту (Сліпимо ботів)
-                      <span class="tooltip-container">
-                        <i data-lucide="circle-help"
-                          class="w-3.5 h-3.5 text-slate-400 hover:text-violet-500 transition-colors"></i>
-                        <span
-                          class="tooltip-text whitespace-normal w-56">Рандомний
-                          зсув яскравості та контрасту. Змінює кольорову
-                          гістограму файлу, на яку дуже сильно спираються
-                          алгоритми модерації.</span>
-                      </span>
-                    </span>
+                    <span class="flex items-center">Зсув контрасту (Сліпимо
+                      ботів)</span>
                   </label>
                   <label
                     class="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-zinc-300 cursor-pointer hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
                     <input type="checkbox" id="uniqGrain" checked
                       class="w-4 h-4 accent-violet-500 cursor-pointer">
-                    <span class="flex items-center">
-                      Плівковий шум (Як у 90-х)
-                      <span class="tooltip-container">
-                        <i data-lucide="circle-help"
-                          class="w-3.5 h-3.5 text-slate-400 hover:text-violet-500 transition-colors"></i>
-                        <span
-                          class="tooltip-text whitespace-normal w-56">Накладає
-                          невидимий паттерн цифрового шуму. Розбиває суцільні
-                          кольори, що зводить з розуму ботів-аналізаторів та OCR
-                          (читання тексту).</span>
-                      </span>
-                    </span>
+                    <span class="flex items-center">Плівковий шум (Як у
+                      90-х)</span>
                   </label>
                   <label
                     class="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-zinc-300 cursor-pointer hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
                     <input type="checkbox" id="uniqVignette"
                       class="w-4 h-4 accent-violet-500 cursor-pointer">
-                    <span class="flex items-center">
-                      Віньєтка (Темні справи)
-                      <span class="tooltip-container">
-                        <i data-lucide="circle-help"
-                          class="w-3.5 h-3.5 text-slate-400 hover:text-violet-500 transition-colors"></i>
-                        <span class="tooltip-text whitespace-normal w-56">Легке
-                          затемнення по краях. Візуально фокусує увагу на
-                          центрі, а технічно — змінює масив десятків тисяч
-                          пікселів.</span>
-                      </span>
-                    </span>
+                    <span class="flex items-center">Віньєтка (Темні
+                      справи)</span>
                   </label>
                 </div>
               </div>
@@ -642,11 +941,11 @@
         <!-- Права колонка: Робоча зона -->
         <div class="lg:col-span-8 flex flex-col gap-4 md:gap-5">
 
-          <!-- Зона завантаження -->
           <div id="dropZone"
             class="drop-zone border-2 border-dashed border-slate-300 dark:border-zinc-700 rounded-[24px] md:rounded-[32px] p-8 md:p-12 text-center cursor-pointer flex flex-col items-center justify-center min-h-[220px] md:min-h-[260px] group hover:border-violet-500 hover:bg-slate-50 dark:hover:bg-dark-surface dark:bg-transparent bg-white/50">
             <input type="file" id="fileInput" multiple
-              accept="image/jpeg, image/png" class="hidden">
+              accept="image/jpeg, image/png, video/mp4, video/webm, video/quicktime"
+              class="hidden">
 
             <div
               class="w-14 h-14 md:w-16 md:h-16 mb-4 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center group-hover:scale-110 group-hover:bg-violet-100 dark:group-hover:bg-violet-500/20 transition-all duration-300">
@@ -660,10 +959,9 @@
               свої креоси сюди</h3>
             <p
               class="text-xs md:text-sm text-slate-500 dark:text-zinc-500 max-w-sm">Тягни
-              файли або клікай. Зжеремо JPG та PNG без проблем.</p>
+              файли або клікай. Зжеремо JPG, PNG та MP4/MOV без проблем.</p>
           </div>
 
-          <!-- Список файлів -->
           <div id="fileListContainer"
             class="hidden flex-col flex-grow bg-surface dark:bg-dark-surface rounded-[20px] md:rounded-[24px] p-5 md:p-6 shadow-soft dark:shadow-soft-dark border border-slate-200 dark:border-zinc-800 transition-colors">
 
@@ -689,7 +987,6 @@
               <!-- Елементи -->
             </div>
 
-            <!-- Панель дій -->
             <div
               class="mt-4 pt-4 md:mt-6 md:pt-6 border-t border-slate-100 dark:border-zinc-800/50">
               <button id="processBtn"
@@ -702,7 +999,6 @@
                   результат 🚀</span>
               </button>
 
-              <!-- Прогрес -->
               <div id="progressContainer"
                 class="hidden mt-4 bg-slate-50 dark:bg-dark-bg rounded-xl md:rounded-2xl p-3 md:p-4 border border-slate-200 dark:border-zinc-800">
                 <div
@@ -717,7 +1013,6 @@
                 </div>
               </div>
 
-              <!-- Анімація Цукера під час обробки -->
               <div id="processingAnimation"
                 class="hidden mt-6 text-center flex justify-center">
                 <div
@@ -730,10 +1025,8 @@
                       data-share-method="host" data-aspect-ratio="0.564257"
                       data-width="100%"><a
                         href="https://tenor.com/view/zucking-zuckering-mark-zuckerberg-stairing-zuck-looking-zuck-gif-12496739009272054031">Zucking
-                        Zuckering GIF</a>from <a
-                        href="https://tenor.com/search/zucking-gifs">Zucking
-                        GIFs</a></div> <script type="text/javascript" async
-                      src="https://tenor.com/embed.js"></script>
+                        Zuckering GIF</a></div> <script type="text/javascript"
+                      async src="https://tenor.com/embed.js"></script>
                   </div>
                   <div class="absolute bottom-4 left-0 w-full text-center z-10">
                     <span
@@ -748,7 +1041,6 @@
         </div>
       </div>
 
-      <!-- Блок Галереї -->
       <div id="gallerySection"
         class="hidden mt-6 md:mt-8 bg-surface dark:bg-dark-surface rounded-[20px] md:rounded-[24px] p-5 md:p-6 shadow-soft dark:shadow-soft-dark border border-slate-200 dark:border-zinc-800 transition-colors">
         <div
@@ -770,32 +1062,13 @@
 
         <div id="galleryGrid"
           class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          <!-- Картинки генеруються тут -->
+          <!-- Картинки та відео генеруються тут -->
         </div>
       </div>
 
     </div>
 
     <script>
-        function refreshIcons() {
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        }
-        document.addEventListener('DOMContentLoaded', refreshIcons);
-
-        // Перемикання Темної/Світлої теми
-        const themeToggleBtn = document.getElementById('themeToggle');
-        themeToggleBtn.addEventListener('click', () => {
-            document.documentElement.classList.toggle('dark');
-            if (document.documentElement.classList.contains('dark')) {
-                localStorage.theme = 'dark';
-            } else {
-                localStorage.theme = 'light';
-            }
-        });
-
-        // Елементи
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         const fileListContainer = document.getElementById('fileListContainer');
@@ -807,64 +1080,865 @@
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
         const progressPercent = document.getElementById('progressPercent');
-
         const gallerySection = document.getElementById('gallerySection');
         const galleryGrid = document.getElementById('galleryGrid');
         const downloadZipBtn = document.getElementById('downloadZipBtn');
+        
+        const enableResize = document.getElementById('enableResize');
+        const resizeSettings = document.getElementById('resizeSettings');
+        const presetSize = document.getElementById('presetSize');
+        const customSizeContainer = document.getElementById('customSizeContainer');
+        const targetWidth = document.getElementById('targetWidth');
+        const targetHeight = document.getElementById('targetHeight');
+        
+        const enableEndSlate = document.getElementById('enableEndSlate');
+        const endSlateSettings = document.getElementById('endSlateSettings');
+        const endSlateDuration = document.getElementById('endSlateDuration');
+        const endSlateType = document.getElementById('endSlateType');
+        const customEndSlateContainer = document.getElementById('customEndSlateContainer');
+        const customEndSlateFile = document.getElementById('customEndSlateFile');
+        
+        const imageQuality = document.getElementById('imageQuality');
+        const qualityValue = document.getElementById('qualityValue');
+        
+        const hardUniq = document.getElementById('hardUniq');
+        const hardUniqSettings = document.getElementById('hardUniqSettings');
+        const uniqRotate = document.getElementById('uniqRotate');
+        const uniqZoom = document.getElementById('uniqZoom');
+        const uniqColor = document.getElementById('uniqColor');
+        const uniqGrain = document.getElementById('uniqGrain');
+        const uniqVignette = document.getElementById('uniqVignette');
+        
+        const addBorderBtn = document.getElementById('addBorderBtn');
+        const bordersList = document.getElementById('bordersList');
+        const nameSuffix = document.getElementById('nameSuffix');
+        const outputFormat = document.getElementById('outputFormat');
+        const themeToggleBtn = document.getElementById('themeToggle');
 
+        const MAX_BORDERS = 5;
+        let borderLayers = [{ id: Date.now(), width: 0, color: '#000000', shape: 'straight' }]; 
         let selectedFiles = [];
         let currentZip = null;
+        let customEndSlateImage = null; 
+        const defaultColors = ['#000000', '#ffffff', '#18181b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#64748b'];
 
-        // Взаємодія з Drag & Drop
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('drag-active');
-        });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-active'));
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-active');
-            handleFiles(e.dataTransfer.files);
-        });
+        // Глобальний словник для зберігання згенерованих файлів (для безпечного скачування по одному)
+        window.generatedBlobs = {};
 
-        // Підтримка Drag & Drop безпосередньо у списку файлів (щоб докидати крео)
-        fileListContainer.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            fileListContainer.style.borderColor = '#8b5cf6';
-            fileListContainer.style.backgroundColor = document.documentElement.classList.contains('dark') ? 'rgba(139, 92, 246, 0.05)' : 'rgba(139, 92, 246, 0.02)';
-        });
-        fileListContainer.addEventListener('dragleave', () => {
-            fileListContainer.style.borderColor = '';
-            fileListContainer.style.backgroundColor = '';
-        });
-        fileListContainer.addEventListener('drop', (e) => {
-            e.preventDefault();
-            fileListContainer.style.borderColor = '';
-            fileListContainer.style.backgroundColor = '';
-            handleFiles(e.dataTransfer.files);
-        });
+        function refreshIcons() {
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+        document.addEventListener('DOMContentLoaded', refreshIcons);
 
-        fileInput.addEventListener('change', (e) => {
-            handleFiles(e.target.files);
-            fileInput.value = '';
-        });
+        // ==========================================
+        // Toast Notification System
+        // ==========================================
+        function showToast(message, type = 'warning') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `max-w-sm p-4 rounded-2xl shadow-xl flex items-start gap-3 transform translate-y-10 opacity-0 transition-all duration-300 ${type === 'warning' ? 'bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 text-orange-800 dark:text-orange-300' : 'bg-surface dark:bg-dark-surface border border-slate-200 dark:border-zinc-800 text-slate-800 dark:text-zinc-200'}`;
+            
+            const icon = type === 'warning' ? '<i data-lucide="alert-triangle" class="w-5 h-5 shrink-0 mt-0.5"></i>' : '<i data-lucide="info" class="w-5 h-5 shrink-0 text-violet-500 mt-0.5"></i>';
+            
+            toast.innerHTML = `
+                ${icon}
+                <p class="text-sm font-medium leading-relaxed">${message}</p>
+            `;
+            
+            container.appendChild(toast);
+            refreshIcons();
+            
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            });
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 6000);
+        }
 
-        clearBtn.addEventListener('click', () => {
-            selectedFiles = [];
-            gallerySection.classList.add('hidden');
-            galleryGrid.innerHTML = '';
-            currentZip = null;
-            updateUI();
-        });
+        // ==========================================
+        // ЛОГІКА FAQ (Модальне вікно)
+        // ==========================================
+        const faqModal = document.getElementById('faqModal');
+        const faqModalContent = document.getElementById('faqModalContent');
+        const openFaqBtn = document.getElementById('openFaqBtn');
+        const closeFaqBtn = document.getElementById('closeFaqBtn');
+        const understandFaqBtn = document.getElementById('understandFaqBtn');
+
+        function openFaq() {
+            if (!faqModal || !faqModalContent) return;
+            faqModal.classList.remove('hidden');
+            void faqModal.offsetWidth; 
+            faqModal.classList.remove('opacity-0');
+            faqModalContent.classList.remove('scale-95');
+            faqModalContent.classList.add('scale-100');
+            refreshIcons();
+        }
+
+        function closeFaq() {
+            if (!faqModal || !faqModalContent) return;
+            faqModal.classList.add('opacity-0');
+            faqModalContent.classList.remove('scale-100');
+            faqModalContent.classList.add('scale-95');
+            setTimeout(() => faqModal.classList.add('hidden'), 300);
+            localStorage.faqSeen = 'true';
+        }
+
+        if (openFaqBtn) openFaqBtn.addEventListener('click', openFaq);
+        if (closeFaqBtn) closeFaqBtn.addEventListener('click', closeFaq);
+        if (understandFaqBtn) understandFaqBtn.addEventListener('click', closeFaq);
+
+        if (!localStorage.faqSeen) {
+            setTimeout(openFaq, 500);
+        }
+
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+                if (document.documentElement.classList.contains('dark')) {
+                    localStorage.theme = 'dark';
+                } else {
+                    localStorage.theme = 'light';
+                }
+            });
+        }
+
+        // ==========================================
+        // МАЙСТЕР-ГУМКА (SMART ERASER WITH OPENCV)
+        // ==========================================
+        const enableEraser = document.getElementById('enableEraser');
+        const eraserSettings = document.getElementById('eraserSettings');
+        const openEraserBtn = document.getElementById('openEraserBtn');
+        const eraserModal = document.getElementById('eraserModal');
+        const closeEraserBtn = document.getElementById('closeEraserBtn');
+        const saveEraserBtn = document.getElementById('saveEraserBtn');
+        const clearEraserBtn = document.getElementById('clearEraserBtn');
+        const eraserPreviewCanvas = document.getElementById('eraserPreviewCanvas');
+        const eraserSizeInput = document.getElementById('eraserSize');
+        const eraserStatusText = document.getElementById('eraserStatusText');
+        const eraserModeSelect = document.getElementById('eraserMode');
+        
+        let eraserPreviewCtx = eraserPreviewCanvas ? eraserPreviewCanvas.getContext('2d') : null;
+        let isDrawingEraser = false;
+        
+        let eraserMaskCanvas = document.createElement('canvas');
+        let eraserMaskCtx = eraserMaskCanvas.getContext('2d');
+        let hasActiveEraserMask = false;
+        let originalPreviewWidth = 0;
+        let originalPreviewHeight = 0;
+        let previewFrameForEraser = null;
+
+        if (enableEraser) {
+            enableEraser.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    eraserSettings.classList.remove('hidden');
+                    eraserSettings.classList.add('animate-[fadeIn_0.3s_ease-out]');
+                } else {
+                    eraserSettings.classList.add('hidden');
+                    hasActiveEraserMask = false; 
+                    if(eraserStatusText) eraserStatusText.classList.add('hidden');
+                }
+            });
+        }
+
+        function extractFirstFrameForEraser(file) {
+            return new Promise((resolve) => {
+                if (file.type.startsWith('image/')) {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.src = URL.createObjectURL(file);
+                } else {
+                    const video = document.createElement('video');
+                    video.src = URL.createObjectURL(file);
+                    video.muted = true;
+                    video.currentTime = 0.5; 
+                    video.onseeked = () => resolve(video);
+                    video.onerror = () => resolve(null);
+                }
+            });
+        }
+
+        if (openEraserBtn) {
+            openEraserBtn.addEventListener('click', async () => {
+                if (selectedFiles.length === 0) {
+                    return showToast("Спершу закиньте файли, щоб було на чому малювати!");
+                }
+                
+                const sourceElement = await extractFirstFrameForEraser(selectedFiles[0]);
+                if (!sourceElement) return showToast("Помилка завантаження прев'ю файлу.");
+
+                previewFrameForEraser = sourceElement; 
+
+                const w = sourceElement.videoWidth || sourceElement.width;
+                const h = sourceElement.videoHeight || sourceElement.height;
+                
+                originalPreviewWidth = w;
+                originalPreviewHeight = h;
+
+                eraserPreviewCanvas.width = w;
+                eraserPreviewCanvas.height = h;
+                eraserPreviewCtx.drawImage(sourceElement, 0, 0, w, h);
+                
+                eraserMaskCanvas.width = w;
+                eraserMaskCanvas.height = h;
+                eraserMaskCtx.clearRect(0, 0, w, h);
+                
+                hasActiveEraserMask = false;
+
+                eraserModal.classList.remove('hidden');
+                void eraserModal.offsetWidth; 
+                eraserModal.classList.remove('opacity-0');
+            });
+        }
+
+        function closeEraserModal() {
+            eraserModal.classList.add('opacity-0');
+            setTimeout(() => eraserModal.classList.add('hidden'), 300);
+        }
+
+        if (closeEraserBtn) closeEraserBtn.addEventListener('click', closeEraserModal);
+
+        if (saveEraserBtn) {
+            saveEraserBtn.addEventListener('click', () => {
+                hasActiveEraserMask = true;
+                if(eraserStatusText) eraserStatusText.classList.remove('hidden');
+                closeEraserModal();
+                showToast("Маску збережено! Вона затре обрану зону на всіх файлах.", "success");
+            });
+        }
+
+        if (clearEraserBtn) {
+            clearEraserBtn.addEventListener('click', () => {
+                eraserMaskCtx.clearRect(0, 0, originalPreviewWidth, originalPreviewHeight);
+                if (previewFrameForEraser) {
+                    eraserPreviewCtx.drawImage(previewFrameForEraser, 0, 0, originalPreviewWidth, originalPreviewHeight);
+                }
+                hasActiveEraserMask = false;
+            });
+        }
+
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            let clientX = evt.clientX;
+            let clientY = evt.clientY;
+            
+            if (evt.touches && evt.touches.length > 0) {
+                clientX = evt.touches[0].clientX;
+                clientY = evt.touches[0].clientY;
+            }
+
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        function startDrawingEraser(e) {
+            isDrawingEraser = true;
+            drawEraser(e);
+        }
+
+        function stopDrawingEraser() {
+            isDrawingEraser = false;
+            eraserPreviewCtx.beginPath();
+            eraserMaskCtx.beginPath();
+        }
+
+        function drawEraser(e) {
+            if (!isDrawingEraser) return;
+            e.preventDefault(); 
+
+            const pos = getMousePos(eraserPreviewCanvas, e);
+            const size = parseInt(eraserSizeInput.value) || 30;
+
+            eraserPreviewCtx.lineWidth = size;
+            eraserPreviewCtx.lineCap = 'round';
+            eraserPreviewCtx.lineJoin = 'round';
+            eraserPreviewCtx.strokeStyle = 'rgba(239, 68, 68, 0.5)'; 
+            
+            eraserPreviewCtx.lineTo(pos.x, pos.y);
+            eraserPreviewCtx.stroke();
+            eraserPreviewCtx.beginPath();
+            eraserPreviewCtx.moveTo(pos.x, pos.y);
+
+            eraserMaskCtx.lineWidth = size;
+            eraserMaskCtx.lineCap = 'round';
+            eraserMaskCtx.lineJoin = 'round';
+            eraserMaskCtx.strokeStyle = '#ffffff';
+            
+            eraserMaskCtx.lineTo(pos.x, pos.y);
+            eraserMaskCtx.stroke();
+            eraserMaskCtx.beginPath();
+            eraserMaskCtx.moveTo(pos.x, pos.y);
+        }
+
+        if (eraserPreviewCanvas) {
+            eraserPreviewCanvas.addEventListener('mousedown', startDrawingEraser);
+            eraserPreviewCanvas.addEventListener('mousemove', drawEraser);
+            eraserPreviewCanvas.addEventListener('mouseup', stopDrawingEraser);
+            eraserPreviewCanvas.addEventListener('mouseout', stopDrawingEraser);
+            
+            eraserPreviewCanvas.addEventListener('touchstart', startDrawingEraser, {passive: false});
+            eraserPreviewCanvas.addEventListener('touchmove', drawEraser, {passive: false});
+            eraserPreviewCanvas.addEventListener('touchend', stopDrawingEraser);
+        }
+
+        // ==============================================================
+        // ФУНКЦІЯ: Накладання розумного стирання за маскою (ОНОВЛЕНО!)
+        // Агресивне розширення маски для видалення напівпрозорих країв
+        // ==============================================================
+        function applySmartEraser(ctx, sourceWidth, sourceHeight, eraserMode) {
+            if (!hasActiveEraserMask || !enableEraser.checked) return;
+
+            if (eraserMode === 'inpaint') {
+                if (typeof cv !== 'undefined' && cv.Mat) {
+                    try {
+                        let src = cv.imread(ctx.canvas);
+                        let mask = cv.imread(eraserMaskCanvas);
+                        let maskGray = new cv.Mat();
+                        cv.cvtColor(mask, maskGray, cv.COLOR_RGBA2GRAY);
+                        
+                        // Зробимо маску бінарною, захоплюючи навіть слабкі штрихи (поріг 10 замість 128)
+                        cv.threshold(maskGray, maskGray, 10, 255, cv.THRESH_BINARY);
+
+                        // АГРЕСИВНЕ МАТЕМАТИЧНЕ РОЗШИРЕННЯ МАСКИ (Dilation)
+                        // Ядро збільшено до 9x9, ітерацій збільшено до 2. Це гарантовано з'їдає контури!
+                        let M = cv.Mat.ones(9, 9, cv.CV_8U);
+                        let anchor = new cv.Point(-1, -1);
+                        cv.dilate(maskGray, maskGray, M, anchor, 2, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
+                        
+                        let dst = new cv.Mat();
+                        // Алгоритм Telea з великим радіусом 7 для ідеального заповнення текстурою
+                        cv.inpaint(src, maskGray, dst, 7, cv.INPAINT_TELEA);
+                        cv.imshow(ctx.canvas, dst);
+                        
+                        src.delete(); mask.delete(); maskGray.delete(); dst.delete(); M.delete();
+                        return; // Успіх!
+                    } catch (err) {
+                        console.error("Помилка OpenCV inpainting, використовуємо запасний метод:", err);
+                    }
+                }
+
+                // ЗАПАСНИЙ JS-АЛГОРИТМ
+                const imgData = ctx.getImageData(0, 0, sourceWidth, sourceHeight);
+                const pixels = imgData.data;
+                const maskCtx = eraserMaskCanvas.getContext('2d');
+                const maskData = maskCtx.getImageData(0, 0, sourceWidth, sourceHeight);
+                const maskPixels = maskData.data;
+
+                let minX = sourceWidth, maxX = 0, minY = sourceHeight, maxY = 0;
+                let hasMask = false;
+                for (let y = 0; y < sourceHeight; y++) {
+                    for (let x = 0; x < sourceWidth; x++) {
+                        const idx = (y * sourceWidth + x) * 4;
+                        if (maskPixels[idx] > 10) { // Знижений поріг
+                            if (x < minX) minX = x;
+                            if (x > maxX) maxX = x;
+                            if (y < minY) minY = y;
+                            if (y > maxY) maxY = y;
+                            hasMask = true;
+                        }
+                    }
+                }
+
+                if (!hasMask) return;
+
+                // Більш агресивне розширення зони для fallback алгоритму
+                minX = Math.max(0, minX - 15);
+                maxX = Math.min(sourceWidth - 1, maxX + 15);
+                minY = Math.max(0, minY - 15);
+                maxY = Math.min(sourceHeight - 1, maxY + 15);
+
+                const srcPixels = new Uint8ClampedArray(pixels);
+                const dirs = [
+                    [-1, 0], [1, 0], [0, -1], [0, 1],
+                    [-1, -1], [1, 1], [-1, 1], [1, -1]
+                ];
+
+                for (let y = minY; y <= maxY; y++) {
+                    for (let x = minX; x <= maxX; x++) {
+                        const idx = (y * sourceWidth + x) * 4;
+                        // Перевіряємо з запасом (симуляція dilation)
+                        let isMasked = false;
+                        for(let my = -3; my <= 3; my++) {
+                            for(let mx = -3; mx <= 3; mx++) {
+                                let checkIdx = ((y+my)*sourceWidth + (x+mx))*4;
+                                if(checkIdx >= 0 && checkIdx < maskPixels.length && maskPixels[checkIdx] > 10) isMasked = true;
+                            }
+                        }
+
+                        if (isMasked) {
+                            let rSum = 0, gSum = 0, bSum = 0, weightSum = 0;
+                            for (let d = 0; d < dirs.length; d++) {
+                                const dx = dirs[d][0];
+                                const dy = dirs[d][1];
+                                let step = 1;
+                                while (step < 80) {
+                                    const sx = x + dx * step;
+                                    const sy = y + dy * step;
+                                    if (sx < 0 || sx >= sourceWidth || sy < 0 || sy >= sourceHeight) break;
+                                    const sIdx = (sy * sourceWidth + sx) * 4;
+                                    if (maskPixels[sIdx] <= 10) { 
+                                        const dist = step;
+                                        const weight = 1.0 / (dist * dist); 
+                                        rSum += srcPixels[sIdx] * weight;
+                                        gSum += srcPixels[sIdx + 1] * weight;
+                                        bSum += srcPixels[sIdx + 2] * weight;
+                                        weightSum += weight;
+                                        break;
+                                    }
+                                    step++;
+                                }
+                            }
+                            if (weightSum > 0) {
+                                pixels[idx] = Math.round(rSum / weightSum);
+                                pixels[idx + 1] = Math.round(gSum / weightSum);
+                                pixels[idx + 2] = Math.round(bSum / weightSum);
+                            }
+                        }
+                    }
+                }
+                ctx.putImageData(imgData, 0, 0);
+
+            } else {
+                ctx.save();
+                const blurCanvas = document.createElement('canvas');
+                blurCanvas.width = sourceWidth;
+                blurCanvas.height = sourceHeight;
+                const blurCtx = blurCanvas.getContext('2d');
+                
+                blurCtx.filter = 'blur(25px)';
+                blurCtx.translate(sourceWidth/2, sourceHeight/2);
+                blurCtx.scale(1.08, 1.08); // Сильніше розтягування
+                blurCtx.translate(-sourceWidth/2, -sourceHeight/2);
+                blurCtx.drawImage(ctx.canvas, 0, 0);
+                
+                blurCtx.filter = 'none';
+                blurCtx.setTransform(1, 0, 0, 1, 0, 0); 
+                blurCtx.globalCompositeOperation = 'destination-in';
+                
+                // Розширюємо маску для блюру
+                blurCtx.shadowColor = 'white';
+                blurCtx.shadowBlur = 10;
+                blurCtx.drawImage(eraserMaskCanvas, 0, 0, sourceWidth, sourceHeight);
+
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.drawImage(blurCanvas, 0, 0);
+                ctx.restore();
+            }
+        }
+
+        // ==========================================
+        // ВОТЕРМАРКА / СВІЙ ЛОГОТИП (LIVE PREVIEW)
+        // ==========================================
+        const enableWatermark = document.getElementById('enableWatermark');
+        const watermarkSettings = document.getElementById('watermarkSettings');
+        const watermarkFileInput = document.getElementById('watermarkFileInput');
+        const openWatermarkBtn = document.getElementById('openWatermarkBtn');
+        const watermarkStatusText = document.getElementById('watermarkStatusText');
+        const watermarkModal = document.getElementById('watermarkModal');
+        const watermarkPreviewCanvas = document.getElementById('watermarkPreviewCanvas');
+        const closeWatermarkModalBtn = document.getElementById('closeWatermarkModalBtn');
+        const saveWatermarkPosBtn = document.getElementById('saveWatermarkPosBtn');
+
+        const modalWatermarkScale = document.getElementById('modalWatermarkScale');
+        const modalWatermarkScaleVal = document.getElementById('modalWatermarkScaleVal');
+        const modalWatermarkOpacity = document.getElementById('modalWatermarkOpacity');
+        const modalWatermarkOpacityVal = document.getElementById('modalWatermarkOpacityVal');
+        
+        let watermarkCtx = watermarkPreviewCanvas ? watermarkPreviewCanvas.getContext('2d') : null;
+        let customWatermarkObj = null;
+        let wmRelX = 0.5; 
+        let wmRelY = 0.5;
+        let isWmPlaced = false;
+
+        function syncWatermarkScale(val) {
+            if (modalWatermarkScale) modalWatermarkScale.value = val;
+            if (modalWatermarkScaleVal) modalWatermarkScaleVal.textContent = `${val}%`;
+            if (watermarkModal && !watermarkModal.classList.contains('hidden')) {
+                drawWatermarkPreview();
+            }
+        }
+
+        function syncWatermarkOpacity(val) {
+            if (modalWatermarkOpacity) modalWatermarkOpacity.value = val;
+            if (modalWatermarkOpacityVal) modalWatermarkOpacityVal.textContent = `${val}%`;
+            if (watermarkModal && !watermarkModal.classList.contains('hidden')) {
+                drawWatermarkPreview();
+            }
+        }
+
+        if (modalWatermarkScale) modalWatermarkScale.addEventListener('input', (e) => syncWatermarkScale(e.target.value));
+        if (modalWatermarkOpacity) modalWatermarkOpacity.addEventListener('input', (e) => syncWatermarkOpacity(e.target.value));
+
+        if (enableWatermark) {
+            enableWatermark.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    watermarkSettings.classList.remove('hidden');
+                    watermarkSettings.classList.add('animate-[fadeIn_0.3s_ease-out]');
+                } else {
+                    watermarkSettings.classList.add('hidden');
+                    isWmPlaced = false;
+                    if(watermarkStatusText) watermarkStatusText.classList.add('hidden');
+                }
+            });
+        }
+
+        if (watermarkFileInput) {
+            watermarkFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && file.type.startsWith('image/png')) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        customWatermarkObj = new Image();
+                        customWatermarkObj.onload = () => {
+                            if (openWatermarkBtn) openWatermarkBtn.disabled = false;
+                        };
+                        customWatermarkObj.src = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function drawWatermarkPreview(mouseX, mouseY) {
+            if (!previewFrameForEraser || !watermarkPreviewCanvas || !watermarkCtx) return; 
+            const w = originalPreviewWidth;
+            const h = originalPreviewHeight;
+            watermarkPreviewCanvas.width = w;
+            watermarkPreviewCanvas.height = h;
+            
+            watermarkCtx.clearRect(0, 0, w, h);
+            watermarkCtx.drawImage(previewFrameForEraser, 0, 0, w, h);
+            
+            if (customWatermarkObj) {
+                watermarkCtx.save();
+                watermarkCtx.globalAlpha = parseInt(modalWatermarkOpacity.value) / 100;
+                const scale = parseInt(modalWatermarkScale.value) / 100;
+                const ww = w * scale;
+                const hh = ww * (customWatermarkObj.height / customWatermarkObj.width);
+                
+                let drawX = (mouseX !== undefined ? mouseX : wmRelX * w) - ww/2;
+                let drawY = (mouseY !== undefined ? mouseY : wmRelY * h) - hh/2;
+                
+                watermarkCtx.drawImage(customWatermarkObj, drawX, drawY, ww, hh);
+                watermarkCtx.restore();
+            }
+        }
+
+        if (openWatermarkBtn) {
+            openWatermarkBtn.addEventListener('click', async () => {
+                if (selectedFiles.length === 0) {
+                    return showToast("Спершу закиньте файли!");
+                }
+                if (!previewFrameForEraser) {
+                    const sourceElement = await extractFirstFrameForEraser(selectedFiles[0]);
+                    if (!sourceElement) return showToast("Помилка прев'ю.");
+                    previewFrameForEraser = sourceElement;
+                    originalPreviewWidth = sourceElement.videoWidth || sourceElement.width;
+                    originalPreviewHeight = sourceElement.videoHeight || sourceElement.height;
+                }
+
+                syncWatermarkScale(modalWatermarkScale ? modalWatermarkScale.value : 25);
+                syncWatermarkOpacity(modalWatermarkOpacity ? modalWatermarkOpacity.value : 90);
+
+                drawWatermarkPreview();
+                
+                watermarkModal.classList.remove('hidden');
+                void watermarkModal.offsetWidth; 
+                watermarkModal.classList.remove('opacity-0');
+            });
+        }
+
+        if (closeWatermarkModalBtn) {
+            closeWatermarkModalBtn.addEventListener('click', () => {
+                watermarkModal.classList.add('opacity-0');
+                setTimeout(() => watermarkModal.classList.add('hidden'), 300);
+            });
+        }
+
+        if (watermarkPreviewCanvas) {
+            watermarkPreviewCanvas.addEventListener('mousemove', (e) => {
+                if(isWmPlaced) return;
+                const pos = getMousePos(watermarkPreviewCanvas, e);
+                drawWatermarkPreview(pos.x, pos.y);
+            });
+
+            watermarkPreviewCanvas.addEventListener('click', (e) => {
+                const pos = getMousePos(watermarkPreviewCanvas, e);
+                wmRelX = pos.x / originalPreviewWidth;
+                wmRelY = pos.y / originalPreviewHeight;
+                isWmPlaced = true;
+                drawWatermarkPreview();
+                showToast("Логотип зафіксовано. Натисніть 'Зберегти позицію'", "success");
+            });
+
+            watermarkPreviewCanvas.addEventListener('touchstart', (e) => {
+                isWmPlaced = false; 
+                const pos = getMousePos(watermarkPreviewCanvas, e);
+                drawWatermarkPreview(pos.x, pos.y);
+            }, {passive: false});
+
+            watermarkPreviewCanvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if(isWmPlaced) return;
+                const pos = getMousePos(watermarkPreviewCanvas, e);
+                drawWatermarkPreview(pos.x, pos.y);
+            }, {passive: false});
+
+            watermarkPreviewCanvas.addEventListener('touchend', (e) => {
+                isWmPlaced = true;
+                showToast("Логотип зафіксовано на екрані.", "success");
+            });
+        }
+
+        if (saveWatermarkPosBtn) {
+            saveWatermarkPosBtn.addEventListener('click', () => {
+                isWmPlaced = true;
+                if(watermarkStatusText) watermarkStatusText.classList.remove('hidden');
+                watermarkModal.classList.add('opacity-0');
+                setTimeout(() => watermarkModal.classList.add('hidden'), 300);
+            });
+        }
+
+        // ==========================================
+        // ЛОГІКА ДЛЯ БАГАТОШАРОВИХ РАМОК
+        // ==========================================
+        function renderBordersUI() {
+            if(!bordersList) return;
+            bordersList.innerHTML = '';
+            
+            borderLayers.forEach((border) => {
+                const item = document.createElement('div');
+                item.className = 'p-3 bg-slate-50 dark:bg-zinc-800/50 rounded-xl border border-slate-200 dark:border-zinc-700 flex flex-col gap-3 relative animate-[fadeIn_0.3s_ease-out]';
+                
+                let removeBtn = '';
+                if (borderLayers.length > 1) {
+                    removeBtn = `
+                        <button onclick="removeBorderLayer(${border.id})" class="absolute -top-2 -right-2 w-6 h-6 bg-red-100 hover:bg-red-500 text-red-500 hover:text-white dark:bg-red-500/20 dark:hover:bg-red-500 dark:text-red-400 rounded-full flex items-center justify-center transition-colors shadow-sm z-10">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                    `;
+                }
+
+                let bgColorStyle = border.color === 'rainbow' ? 'background: conic-gradient(from 180deg, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #8b5cf6, #ec4899, #ef4444);' : `background-color: ${border.color};`;
+
+                item.innerHTML = `
+                    ${removeBtn}
+                    <div class="flex items-center gap-3">
+                        <div class="w-1/3">
+                            <label class="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mb-1 block uppercase tracking-wide">Товщина, px</label>
+                            <div class="flex items-center bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-600 rounded-lg overflow-hidden shadow-sm h-9">
+                                <button onclick="changeBorderWidth(${border.id}, -1)" class="w-8 h-full flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 border-r border-slate-200 dark:border-zinc-700">
+                                    <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <input type="number" value="${border.width}" min="0" max="100" onchange="setBorderWidth(${border.id}, this.value)" class="w-full h-full bg-transparent text-center text-slate-800 dark:text-zinc-100 text-sm font-bold outline-none border-none p-0 focus:ring-0">
+                                <button onclick="changeBorderWidth(${border.id}, 1)" class="w-8 h-full flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 border-l border-slate-200 dark:border-zinc-700">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="w-1/3">
+                            <label class="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mb-1 block uppercase tracking-wide">Форма</label>
+                            <select onchange="setBorderShape(${border.id}, this.value)" class="w-full h-9 bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-600 rounded-lg px-2 text-slate-800 dark:text-zinc-100 text-xs font-medium appearance-none shadow-sm focus:ring-2 focus:ring-violet-500/30 outline-none">
+                                <option value="straight" ${border.shape === 'straight' ? 'selected' : ''}>Пряма</option>
+                                <option value="dashed" ${border.shape === 'dashed' ? 'selected' : ''}>Пунктир</option>
+                                <option value="dotted" ${border.shape === 'dotted' ? 'selected' : ''}>Крапки</option>
+                                <option value="wave" ${border.shape === 'wave' ? 'selected' : ''}>Хвиля</option>
+                                <option value="zigzag" ${border.shape === 'zigzag' ? 'selected' : ''}>Зигзаг</option>
+                            </select>
+                        </div>
+                        <div class="w-1/3">
+                            <label class="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mb-1 block uppercase tracking-wide">Колір</label>
+                            <div class="flex items-center gap-2">
+                                <div class="relative w-9 h-9 shrink-0">
+                                    <div class="w-full h-full rounded-lg border border-slate-300 dark:border-zinc-600 shadow-sm pointer-events-none absolute inset-0" style="${bgColorStyle}"></div>
+                                    <input type="color" value="${border.color !== 'rainbow' ? border.color : '#000000'}" onchange="setBorderColor(${border.id}, this.value)" class="w-full h-full opacity-0 cursor-pointer absolute inset-0">
+                                </div>
+                                <div class="flex flex-wrap gap-1" id="palette-${border.id}"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                bordersList.appendChild(item);
+
+                const paletteContainer = document.getElementById(`palette-${border.id}`);
+                if (paletteContainer) {
+                    const btnRainbow = document.createElement('button');
+                    btnRainbow.className = 'w-4 h-4 rounded-full ring-1 ring-slate-300 dark:ring-zinc-600 hover:scale-125 transition-transform rainbow-btn';
+                    btnRainbow.title = 'Райдужний градієнт';
+                    btnRainbow.onclick = () => setBorderColor(border.id, 'rainbow');
+                    paletteContainer.appendChild(btnRainbow);
+
+                    defaultColors.forEach(color => {
+                        const btn = document.createElement('button');
+                        btn.className = `w-4 h-4 rounded-full ring-1 ring-slate-300 dark:ring-zinc-600 hover:scale-125 transition-transform ${color === '#ffffff' || color === '#f8fafc' ? 'shadow-[inset_0_0_2px_rgba(0,0,0,0.1)]' : ''}`;
+                        btn.style.backgroundColor = color;
+                        btn.onclick = () => setBorderColor(border.id, color);
+                        paletteContainer.appendChild(btn);
+                    });
+                }
+            });
+
+            if (addBorderBtn) {
+                addBorderBtn.style.display = borderLayers.length >= MAX_BORDERS ? 'none' : 'flex';
+            }
+            refreshIcons();
+        }
+
+        window.changeBorderWidth = function(id, delta) {
+            const border = borderLayers.find(b => b.id === id);
+            if (border) {
+                let newW = border.width + delta;
+                if (newW < 0) newW = 0;
+                if (newW > 100) newW = 100;
+                border.width = newW;
+                renderBordersUI();
+            }
+        };
+
+        window.setBorderWidth = function(id, val) {
+            const border = borderLayers.find(b => b.id === id);
+            if (border) {
+                let newW = parseInt(val) || 0;
+                if (newW < 0) newW = 0;
+                if (newW > 100) newW = 100;
+                border.width = newW;
+                renderBordersUI();
+            }
+        };
+
+        window.setBorderShape = function(id, shape) {
+            const border = borderLayers.find(b => b.id === id);
+            if (border) {
+                border.shape = shape;
+                renderBordersUI();
+            }
+        };
+
+        window.setBorderColor = function(id, color) {
+            const border = borderLayers.find(b => b.id === id);
+            if (border) {
+                border.color = color;
+                renderBordersUI();
+            }
+        };
+
+        window.removeBorderLayer = function(id) {
+            borderLayers = borderLayers.filter(b => b.id !== id);
+            renderBordersUI();
+        };
+
+        if (addBorderBtn) {
+            addBorderBtn.addEventListener('click', () => {
+                if (borderLayers.length < MAX_BORDERS) {
+                    borderLayers.push({ id: Date.now(), width: 10, color: '#000000', shape: 'straight' });
+                    renderBordersUI();
+                }
+            });
+        }
+
+        renderBordersUI(); 
+
+        // ==========================================
+        // Палітра фону
+        // ==========================================
+        const bgPaletteContainer = document.getElementById('bgPalette');
+        const bgColorInput = document.getElementById('bgColor');
+        
+        if (bgPaletteContainer && bgColorInput) {
+            defaultColors.forEach(color => {
+                const btn = document.createElement('button');
+                btn.className = `w-[18px] h-[18px] rounded-full ring-1 ring-slate-300 dark:ring-zinc-700 hover:scale-125 transition-transform ${color === '#ffffff' || color === '#f8fafc' ? 'shadow-[inset_0_0_2px_rgba(0,0,0,0.1)]' : ''}`;
+                btn.style.backgroundColor = color;
+                btn.onclick = () => { bgColorInput.value = color; };
+                bgPaletteContainer.appendChild(btn);
+            });
+        }
+
+        // ==========================================
+        // ЛОГІКА DRAG & DROP ТА ФАЙЛІВ
+        // ==========================================
+        if (dropZone) {
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-active');
+            });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-active'));
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-active');
+                handleFiles(e.dataTransfer.files);
+            });
+        }
+
+        if (fileListContainer) {
+            fileListContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileListContainer.style.borderColor = '#8b5cf6';
+                fileListContainer.style.backgroundColor = document.documentElement.classList.contains('dark') ? 'rgba(139, 92, 246, 0.05)' : 'rgba(139, 92, 246, 0.02)';
+            });
+            fileListContainer.addEventListener('dragleave', () => {
+                fileListContainer.style.borderColor = '';
+                fileListContainer.style.backgroundColor = '';
+            });
+            fileListContainer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileListContainer.style.borderColor = '';
+                fileListContainer.style.backgroundColor = '';
+                handleFiles(e.dataTransfer.files);
+            });
+        }
+
+        if (fileInput) {
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+                fileInput.value = '';
+            });
+        }
 
         function handleFiles(files) {
-            const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-            selectedFiles = [...selectedFiles, ...imageFiles];
+            const newFiles = Array.from(files).filter(file => file.type.startsWith('image/') || file.type.startsWith('video/'));
+
+            let currentVideoCount = selectedFiles.filter(f => f.type.startsWith('video/')).length;
+            let allowedNewVideos = 10 - currentVideoCount;
+
+            const filesToAdd = [];
+            let rejectedVideos = 0;
+
+            newFiles.forEach(file => {
+                if (file.type.startsWith('video/')) {
+                    if (allowedNewVideos > 0) {
+                        filesToAdd.push(file);
+                        allowedNewVideos--;
+                    } else {
+                        rejectedVideos++;
+                    }
+                } else {
+                    filesToAdd.push(file);
+                }
+            });
+
+            if (rejectedVideos > 0) {
+                showToast(`⚠️ Ліміт: Максимум 10 відео за раз. ${rejectedVideos} відео пропущено, щоб не зламати браузер.`);
+            }
+
+            selectedFiles = [...selectedFiles, ...filesToAdd];
             updateUI();
         }
 
         function updateUI() {
+            if (!fileListContainer || !dropZone || !fileCount || !fileList) return;
+
             if (selectedFiles.length > 0) {
                 fileListContainer.classList.remove('hidden');
                 fileListContainer.classList.add('flex');
@@ -873,12 +1947,13 @@
                 
                 fileList.innerHTML = '';
                 selectedFiles.forEach((file, index) => {
+                    const isVideo = file.type.startsWith('video/');
                     const item = document.createElement('div');
                     item.className = 'flex justify-between items-center bg-slate-50 dark:bg-dark-bg p-2 md:p-3 rounded-xl border border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors';
                     item.innerHTML = `
                         <div class="flex items-center gap-2 md:gap-3 overflow-hidden">
                             <div class="w-6 h-6 md:w-8 md:h-8 rounded-lg bg-white dark:bg-zinc-800 shadow-sm border border-slate-200 dark:border-zinc-700 flex items-center justify-center flex-shrink-0">
-                                <i data-lucide="image" class="w-3 h-3 md:w-4 md:h-4 text-violet-500"></i>
+                                <i data-lucide="${isVideo ? 'video' : 'image'}" class="w-3 h-3 md:w-4 md:h-4 ${isVideo ? 'text-pink-500' : 'text-violet-500'}"></i>
                             </div>
                             <span class="text-xs md:text-sm font-medium text-slate-700 dark:text-zinc-300 truncate">${file.name}</span>
                         </div>
@@ -889,7 +1964,6 @@
                     fileList.appendChild(item);
                 });
 
-                // Кнопка "Додати ще крео", яка з'являється під списком файлів
                 const addMoreItem = document.createElement('div');
                 addMoreItem.className = 'flex justify-center items-center bg-transparent border-2 border-dashed border-slate-300 dark:border-zinc-700 hover:border-violet-500 hover:text-violet-500 hover:bg-slate-50 dark:hover:bg-zinc-800/50 p-3 rounded-xl transition-colors cursor-pointer text-slate-500 dark:text-zinc-500 mt-2 shrink-0';
                 addMoreItem.onclick = () => fileInput.click();
@@ -914,268 +1988,633 @@
             updateUI();
         }
 
-        window.downloadSingleFile = function(url, filename) {
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        };
-
-        // Логіка UI
-        const enableResize = document.getElementById('enableResize');
-        const resizeSettings = document.getElementById('resizeSettings');
-        const bgMode = document.getElementById('bgMode');
-        const bgColorContainer = document.getElementById('bgColorContainer');
-        const presetSize = document.getElementById('presetSize');
-        const customSizeContainer = document.getElementById('customSizeContainer');
-        const targetWidth = document.getElementById('targetWidth');
-        const targetHeight = document.getElementById('targetHeight');
-
-        const imageQuality = document.getElementById('imageQuality');
-        const qualityValue = document.getElementById('qualityValue');
-
-        const hardUniq = document.getElementById('hardUniq');
-        const hardUniqSettings = document.getElementById('hardUniqSettings');
-
-        const borderWidthInput = document.getElementById('borderWidth');
-        const borderMinusBtn = document.getElementById('borderMinus');
-        const borderPlusBtn = document.getElementById('borderPlus');
-
-        borderMinusBtn.addEventListener('click', () => {
-            let val = parseInt(borderWidthInput.value) || 0;
-            if (val > 0) borderWidthInput.value = val - 1;
-        });
-
-        borderPlusBtn.addEventListener('click', () => {
-            let val = parseInt(borderWidthInput.value) || 0;
-            if (val < 100) borderWidthInput.value = val + 1;
-        });
-
-        borderWidthInput.addEventListener('change', () => {
-            let val = parseInt(borderWidthInput.value) || 0;
-            if (val < 0) val = 0;
-            if (val > 100) val = 100;
-            borderWidthInput.value = val;
-        });
-
-        // Палітра 
-        const defaultColors = ['#000000', '#ffffff', '#18181b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#64748b'];
-        
-        function renderPalette(containerId, inputId) {
-            const container = document.getElementById(containerId);
-            const input = document.getElementById(inputId);
-            defaultColors.forEach(color => {
-                const btn = document.createElement('button');
-                btn.className = `w-4 h-4 md:w-5 md:h-5 rounded-full ring-1 ring-slate-300 dark:ring-zinc-700 hover:scale-125 transition-transform ${color === '#ffffff' || color === '#f8fafc' ? 'shadow-[inset_0_0_2px_rgba(0,0,0,0.1)]' : ''}`;
-                btn.style.backgroundColor = color;
-                btn.onclick = () => { input.value = color; };
-                container.appendChild(btn);
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                selectedFiles = [];
+                if(gallerySection) gallerySection.classList.add('hidden');
+                if(galleryGrid) galleryGrid.innerHTML = '';
+                currentZip = null;
+                window.generatedBlobs = {}; // Очищення пам'яті
+                updateUI();
             });
         }
-        
-        renderPalette('borderPalette', 'borderColor');
-        renderPalette('bgPalette', 'bgColor');
 
-        imageQuality.addEventListener('input', (e) => {
-            qualityValue.textContent = `${e.target.value}%`;
-        });
-
-        enableResize.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                resizeSettings.classList.remove('hidden');
-                resizeSettings.classList.add('animate-[fadeIn_0.3s_ease-out]');
-            } else {
-                resizeSettings.classList.add('hidden');
+        // ==========================================
+        // БАГ ФІКС: СКАЧУВАННЯ ОДНОГО ФАЙЛУ (Bypass iFrame)
+        // ==========================================
+        window.downloadSingleFile = function(filename) {
+            try {
+                const blob = window.generatedBlobs[filename];
+                if (blob) {
+                    if (typeof saveAs !== 'undefined') {
+                        saveAs(blob, filename); // Безвідмовно через FileSaver
+                    } else {
+                        const blobUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = blobUrl;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        setTimeout(() => {
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(blobUrl);
+                        }, 100);
+                    }
+                } else {
+                    showToast("Помилка: файл не знайдено в пам'яті.", "warning");
+                }
+            } catch (e) {
+                console.error("Скачування не вдалося", e);
+                showToast("Помилка завантаження файлу. Спробуйте скачати ZIP архів.", "warning");
             }
-        });
+        };
 
-        bgMode.addEventListener('change', (e) => {
-            const needsColor = ['color', 'shadow', 'gradient'].includes(e.target.value);
-            bgColorContainer.classList.toggle('hidden', !needsColor);
-        });
-
-        presetSize.addEventListener('change', (e) => {
-            if (e.target.value === 'custom') {
-                customSizeContainer.style.display = 'flex';
-            } else {
-                customSizeContainer.style.display = 'none';
-                const [w, h] = e.target.value.split('x');
-                targetWidth.value = w;
-                targetHeight.value = h;
-            }
-        });
-        presetSize.dispatchEvent(new Event('change'));
-
-        hardUniq.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                hardUniqSettings.classList.remove('hidden');
-                hardUniqSettings.classList.add('animate-[fadeIn_0.3s_ease-out]');
-            } else {
-                hardUniqSettings.classList.add('hidden');
-            }
-        });
-
-        downloadZipBtn.addEventListener('click', async () => {
-            if (!currentZip) return;
-            const btnOriginalText = downloadZipBtn.innerHTML;
-            downloadZipBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 md:w-5 md:h-5 animate-spin"></i> Пакуємо в ZIP...';
-            downloadZipBtn.disabled = true;
-            
-            const zipContent = await currentZip.generateAsync({ type: "blob" });
-            saveAs(zipContent, "Creatives_Studio_Pack.zip");
-            
-            downloadZipBtn.innerHTML = '<i data-lucide="check" class="w-4 h-4 md:w-5 md:h-5"></i> Готово, ховай!';
-            
-            const successModal = document.getElementById('successZuckModal');
-            const successScale = document.getElementById('successZuckScale');
-            
-            successModal.classList.remove('hidden');
-            requestAnimationFrame(() => {
-                successModal.classList.remove('opacity-0');
-                successModal.classList.add('opacity-100');
-                successScale.classList.remove('scale-50');
-                successScale.classList.add('scale-100');
+        // ==========================================
+        // НАЛАШТУВАННЯ UI
+        // ==========================================
+        if (imageQuality && qualityValue) {
+            imageQuality.addEventListener('input', (e) => {
+                qualityValue.textContent = `${e.target.value}%`;
             });
+        }
 
-            setTimeout(() => {
-                // Ховаємо з анімацією
-                successModal.classList.remove('opacity-100');
-                successModal.classList.add('opacity-0');
-                successScale.classList.remove('scale-100');
-                successScale.classList.add('scale-50');
+        if (enableResize) {
+            enableResize.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    resizeSettings.classList.remove('hidden');
+                    resizeSettings.classList.add('animate-[fadeIn_0.3s_ease-out]');
+                } else {
+                    resizeSettings.classList.add('hidden');
+                }
+            });
+        }
+
+        if (enableEndSlate) {
+            enableEndSlate.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    endSlateSettings.classList.remove('hidden');
+                    endSlateSettings.classList.add('animate-[fadeIn_0.3s_ease-out]');
+                } else {
+                    endSlateSettings.classList.add('hidden');
+                }
+            });
+        }
+
+        if (endSlateType) {
+            endSlateType.addEventListener('change', (e) => {
+                if (e.target.value === 'custom') {
+                    customEndSlateContainer.classList.remove('hidden');
+                } else {
+                    customEndSlateContainer.classList.add('hidden');
+                }
+            });
+        }
+
+        if (customEndSlateFile) {
+            customEndSlateFile.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        customEndSlateImage = new Image();
+                        customEndSlateImage.src = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        const bgMode = document.getElementById('bgMode');
+        const bgColorContainer = document.getElementById('bgColorContainer');
+        if (bgMode && bgColorContainer) {
+            bgMode.addEventListener('change', (e) => {
+                const needsColor = ['color', 'shadow', 'gradient'].includes(e.target.value);
+                bgColorContainer.classList.toggle('hidden', !needsColor);
+            });
+        }
+
+        if (presetSize) {
+            presetSize.addEventListener('change', (e) => {
+                if (e.target.value === 'custom') {
+                    customSizeContainer.style.display = 'flex';
+                } else {
+                    customSizeContainer.style.display = 'none';
+                    const [w, h] = e.target.value.split('x');
+                    if (targetWidth) targetWidth.value = w;
+                    if (targetHeight) targetHeight.value = h;
+                }
+            });
+            presetSize.dispatchEvent(new Event('change'));
+        }
+
+        if (hardUniq) {
+            hardUniq.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    hardUniqSettings.classList.remove('hidden');
+                    hardUniqSettings.classList.add('animate-[fadeIn_0.3s_ease-out]');
+                } else {
+                    hardUniqSettings.classList.add('hidden');
+                }
+            });
+        }
+
+        if (downloadZipBtn) {
+            downloadZipBtn.addEventListener('click', async () => {
+                if (!currentZip) return;
+                const btnOriginalText = downloadZipBtn.innerHTML;
+                downloadZipBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 md:w-5 md:h-5 animate-spin"></i> Пакуємо в ZIP...';
+                downloadZipBtn.disabled = true;
                 
+                const zipContent = await currentZip.generateAsync({ type: "blob" });
+                saveAs(zipContent, "Creatives_Studio_Pack.zip");
+                
+                downloadZipBtn.innerHTML = '<i data-lucide="check" class="w-4 h-4 md:w-5 md:h-5"></i> Готово, ховай!';
+                
+                const successModal = document.getElementById('successZuckModal');
+                const successScale = document.getElementById('successZuckScale');
+                
+                successModal.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                    successModal.classList.remove('opacity-0');
+                    successModal.classList.add('opacity-100');
+                    successScale.classList.remove('scale-50');
+                    successScale.classList.add('scale-100');
+                });
+
                 setTimeout(() => {
-                    successModal.classList.add('hidden');
-                    downloadZipBtn.innerHTML = btnOriginalText;
-                    downloadZipBtn.disabled = false;
-                    refreshIcons();
-                }, 500); 
-            }, 3500); 
-        });
+                    successModal.classList.remove('opacity-100');
+                    successModal.classList.add('opacity-0');
+                    successScale.classList.remove('scale-100');
+                    successScale.classList.add('scale-50');
+                    
+                    setTimeout(() => {
+                        successModal.classList.add('hidden');
+                        downloadZipBtn.innerHTML = btnOriginalText;
+                        downloadZipBtn.disabled = false;
+                        refreshIcons();
+                    }, 500); 
+                }, 3500); 
+            });
+        }
 
-        // Движок обробки
-        processBtn.addEventListener('click', async () => {
-            if (selectedFiles.length === 0) return;
+        // ==========================================
+        // MAIN PROCESSING LOGIC
+        // ==========================================
+        if (processBtn) {
+            processBtn.addEventListener('click', async () => {
+                if (selectedFiles.length === 0) return;
 
-            const qualitySlider = parseInt(imageQuality.value);
-            let realQuality = 1.0;
-            if (qualitySlider === 100) {
-                realQuality = 1.0;
-            } else if (qualitySlider >= 50) {
-                realQuality = 0.98 + ((qualitySlider - 50) / 49) * 0.015;
-            } else {
-                realQuality = 0.85 + ((qualitySlider - 10) / 39) * 0.13;
-            }
-
-            const settings = {
-                bWidth: parseInt(document.getElementById('borderWidth').value) || 0,
-                bColor: document.getElementById('borderColor').value,
-                suffix: document.getElementById('nameSuffix').value,
-                resizeEnabled: document.getElementById('enableResize').checked,
-                targetW: parseInt(document.getElementById('targetWidth').value) || 1080,
-                targetH: parseInt(document.getElementById('targetHeight').value) || 1080,
-                bgMode: document.getElementById('bgMode').value,
-                bgColor: document.getElementById('bgColor').value,
-                format: document.getElementById('outputFormat').value,
-                quality: realQuality,
-                hardUniq: document.getElementById('hardUniq').checked,
-                uniqRotate: document.getElementById('uniqRotate').checked,
-                uniqZoom: document.getElementById('uniqZoom').checked,
-                uniqColor: document.getElementById('uniqColor').checked,
-                uniqGrain: document.getElementById('uniqGrain').checked,
-                uniqVignette: document.getElementById('uniqVignette').checked
-            };
-
-            processBtn.disabled = true;
-            processBtn.classList.add('opacity-50', 'pointer-events-none');
-            progressContainer.classList.remove('hidden');
-            
-            const animContainer = document.getElementById('processingAnimation');
-            animContainer.classList.remove('hidden');
-            
-            galleryGrid.innerHTML = '';
-            gallerySection.classList.add('hidden');
-            
-            currentZip = new JSZip();
-            let processedCount = 0;
-
-            for (let i = 0; i < selectedFiles.length; i++) {
-                const file = selectedFiles[i];
-                
-                try {
-                    progressText.textContent = `Шаманимо над файлами... ${i + 1} з ${selectedFiles.length}`;
-
-                    const extIndex = file.name.lastIndexOf('.');
-                    const baseName = extIndex !== -1 ? file.name.substring(0, extIndex) : file.name;
-                    
-                    // Обробка оригінального зображення в повній якості
-                    const result = await processImage(file, settings);
-                    
-                    // Генеруємо 6-значне випадкове число для унікальності
-                    const randomNum = Math.floor(100000 + Math.random() * 900000);
-                    
-                    let cleanSuffix = settings.suffix.trim();
-                    if (cleanSuffix.startsWith('_')) cleanSuffix = cleanSuffix.substring(1);
-                    
-                    // Формуємо нову назву файлу з випадковим числом
-                    const newName = cleanSuffix ? `${baseName}_${cleanSuffix}_${randomNum}${result.extension}` : `${baseName}_${randomNum}${result.extension}`;
-                    
-                    currentZip.file(newName, result.blob);
-                    const previewUrl = URL.createObjectURL(result.blob);
-                    
-                    const card = document.createElement('div');
-                    card.className = "relative h-full w-full group/card";
-                    
-                    card.innerHTML = `
-                        <!-- Сама картка -->
-                        <div class="relative z-10 bg-white dark:bg-dark-bg border border-slate-200 dark:border-zinc-800 rounded-xl md:rounded-2xl overflow-hidden flex flex-col group hover:border-violet-400 dark:hover:border-violet-500 transition-colors shadow-sm h-full">
-                            <div class="p-2.5 md:p-3 bg-slate-50 dark:bg-[#131315] border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center shrink-0">
-                                <span class="text-[10px] md:text-xs font-semibold text-slate-600 dark:text-zinc-400 truncate pr-2" title="${newName}">${newName}</span>
-                                <span class="text-[10px] md:text-xs font-bold text-violet-600 dark:text-violet-400 shrink-0 bg-violet-100 dark:bg-violet-500/10 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md">${(result.blob.size / 1024).toFixed(1)} KB</span>
-                            </div>
-                            <div class="p-3 md:p-4 flex-grow flex items-center justify-center bg-slate-100 dark:bg-[#0d0d0e] relative overflow-hidden" style="background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 16px 16px;">
-                                <img src="${previewUrl}" class="max-h-[200px] md:max-h-[300px] w-auto object-contain rounded-lg shadow-md group-hover:scale-105 transition-transform duration-500">
-                            </div>
-                            <div class="p-2.5 md:p-3 border-t border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900/40">
-                                <button onclick="downloadSingleFile('${previewUrl}', '${newName}')" class="w-full bg-white dark:bg-zinc-800 hover:bg-violet-50 dark:hover:bg-violet-600 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:text-violet-600 dark:hover:text-white text-xs md:text-sm font-semibold py-2 rounded-lg md:rounded-[10px] transition-all flex items-center justify-center gap-2">
-                                    <i data-lucide="download" class="w-3.5 h-3.5 md:w-4 md:h-4"></i> Стягнути один
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                    galleryGrid.appendChild(card);
-                    
-                } catch (error) {
-                    console.error("Помилка:", file.name, error);
+                const qualitySlider = parseInt(imageQuality.value);
+                let realQuality = 0.8;
+                if (qualitySlider === 100) {
+                    realQuality = 0.92; 
+                } else if (qualitySlider >= 50) {
+                    realQuality = 0.7 + ((qualitySlider - 50) / 50) * 0.22; 
+                } else {
+                    realQuality = 0.4 + ((qualitySlider - 10) / 40) * 0.3;
                 }
 
-                processedCount++;
-                const percent = Math.round((processedCount / selectedFiles.length) * 100);
-                progressBar.style.width = `${percent}%`;
-                progressPercent.textContent = `${percent}%`;
+                const validBorders = borderLayers.filter(b => b.width > 0);
+                const totalBWidth = validBorders.reduce((sum, b) => sum + b.width, 0);
+
+                const settings = {
+                    borders: validBorders,
+                    totalBorderWidth: totalBWidth,
+                    suffix: document.getElementById('nameSuffix') ? document.getElementById('nameSuffix').value : '_uniq',
+                    resizeEnabled: enableResize ? enableResize.checked : false,
+                    targetW: targetWidth ? parseInt(targetWidth.value) || 1080 : 1080,
+                    targetH: targetHeight ? parseInt(targetHeight.value) || 1080 : 1080,
+                    bgMode: bgMode ? bgMode.value : 'smart-smear',
+                    bgColor: document.getElementById('bgColor') ? document.getElementById('bgColor').value : '#ffffff',
+                    format: document.getElementById('outputFormat') ? document.getElementById('outputFormat').value : 'auto',
+                    quality: realQuality,
+                    
+                    eraserMode: eraserModeSelect ? eraserModeSelect.value : 'blur',
+
+                    endSlateEnabled: enableEndSlate ? enableEndSlate.checked : false,
+                    endSlateDuration: endSlateDuration ? parseInt(endSlateDuration.value) || 15 : 15,
+                    endSlateType: endSlateType ? endSlateType.value : 'preset-girl',
+                    
+                    hardUniq: hardUniq ? hardUniq.checked : false,
+                    uniqRotate: uniqRotate ? uniqRotate.checked : false,
+                    uniqZoom: uniqZoom ? uniqZoom.checked : false,
+                    uniqColor: uniqColor ? uniqColor.checked : false,
+                    uniqGrain: uniqGrain ? uniqGrain.checked : false,
+                    uniqVignette: uniqVignette ? uniqVignette.checked : false,
+
+                    watermarkEnabled: enableWatermark ? enableWatermark.checked : false,
+                    watermarkImage: customWatermarkObj,
+                    watermarkScale: modalWatermarkScale ? parseInt(modalWatermarkScale.value) / 100 : 0.25,
+                    watermarkOpacity: modalWatermarkOpacity ? parseInt(modalWatermarkOpacity.value) / 100 : 0.9,
+                    watermarkRelX: wmRelX,
+                    watermarkRelY: wmRelY,
+                    isWmPlaced: isWmPlaced
+                };
+
+                processBtn.disabled = true;
+                processBtn.classList.add('opacity-50', 'pointer-events-none');
+                if (progressContainer) progressContainer.classList.remove('hidden');
                 
-                progressText.textContent = `Шаманимо над файлами... ${processedCount} з ${selectedFiles.length}`;
+                const animContainer = document.getElementById('processingAnimation');
+                if (animContainer) animContainer.classList.remove('hidden');
+
+                if (progressText) progressText.textContent = "Готуємо матеріали (завантажуємо хвіст)...";
+                if (settings.endSlateEnabled) {
+                    settings.loadedEndSlateImage = await loadEndSlateImage(settings.endSlateType);
+                }
+                
+                if (galleryGrid) galleryGrid.innerHTML = '';
+                if (gallerySection) gallerySection.classList.add('hidden');
+                
+                currentZip = new JSZip();
+                window.generatedBlobs = {}; // Скидаємо пам'ять файлів
+                let processedCount = 0;
+
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    const file = selectedFiles[i];
+                    const isVideo = file.type.startsWith('video/');
+                    
+                    try {
+                        if (progressText) {
+                            progressText.textContent = isVideo 
+                                ? `Рендеримо відео (це займе час)... ${i + 1} з ${selectedFiles.length}`
+                                : `Шаманимо над файлами... ${i + 1} з ${selectedFiles.length}`;
+                        }
+
+                        const extIndex = file.name.lastIndexOf('.');
+                        const baseName = extIndex !== -1 ? file.name.substring(0, extIndex) : file.name;
+                        
+                        let result;
+                        if (isVideo) {
+                            result = await processVideo(file, settings);
+                        } else {
+                            result = await processImage(file, settings);
+                        }
+                        
+                        const randomNum = Math.floor(100000 + Math.random() * 900000);
+                        let cleanSuffix = settings.suffix.trim();
+                        if (cleanSuffix.startsWith('_')) cleanSuffix = cleanSuffix.substring(1);
+                        const newName = cleanSuffix ? `${baseName}_${cleanSuffix}_${randomNum}${result.extension}` : `${baseName}_${randomNum}${result.extension}`;
+                        
+                        // ЗБЕРЕЖЕННЯ ДЛЯ ZIP ТА СОЛО СКАЧУВАННЯ
+                        currentZip.file(newName, result.blob);
+                        window.generatedBlobs[newName] = result.blob; 
+                        
+                        const previewUrl = URL.createObjectURL(result.blob);
+                        
+                        let sizeText = '';
+                        if (isVideo) {
+                            sizeText = `${(result.blob.size / 1024 / 1024).toFixed(2)} MB`;
+                        } else {
+                            sizeText = `${(result.blob.size / 1024).toFixed(1)} KB`;
+                        }
+                        
+                        const card = document.createElement('div');
+                        card.className = "relative h-full w-full group/card";
+                        
+                        card.innerHTML = `
+                            <div class="relative z-10 bg-white dark:bg-dark-bg border border-slate-200 dark:border-zinc-800 rounded-xl md:rounded-2xl overflow-hidden flex flex-col group hover:border-violet-400 dark:hover:border-violet-500 transition-colors shadow-sm h-full">
+                                <div class="p-2.5 md:p-3 bg-slate-50 dark:bg-[#131315] border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center shrink-0">
+                                    <span class="text-[10px] md:text-xs font-semibold text-slate-600 dark:text-zinc-400 truncate pr-2" title="${newName}">${newName}</span>
+                                    <span class="text-[10px] md:text-xs font-bold text-violet-600 dark:text-violet-400 shrink-0 bg-violet-100 dark:bg-violet-500/10 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md">${sizeText}</span>
+                                </div>
+                                <div class="p-3 md:p-4 flex-grow flex items-center justify-center bg-slate-100 dark:bg-[#0d0d0e] relative overflow-hidden" style="background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 16px 16px;">
+                                    ${isVideo 
+                                        ? `<video src="${previewUrl}" class="max-h-[200px] md:max-h-[300px] w-auto object-contain rounded-lg shadow-md group-hover:scale-105 transition-transform duration-500" controls loop></video>`
+                                        : `<img src="${previewUrl}" class="max-h-[200px] md:max-h-[300px] w-auto object-contain rounded-lg shadow-md group-hover:scale-105 transition-transform duration-500">`
+                                    }
+                                </div>
+                                <div class="p-2.5 md:p-3 border-t border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900/40">
+                                    <!-- Зміна передачі параметру: тільки ім'я -->
+                                    <button onclick="downloadSingleFile('${newName}')" class="w-full bg-white dark:bg-zinc-800 hover:bg-violet-50 dark:hover:bg-violet-600 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:text-violet-600 dark:hover:text-white text-xs md:text-sm font-semibold py-2 rounded-lg md:rounded-[10px] transition-all flex items-center justify-center gap-2">
+                                        <i data-lucide="download" class="w-3.5 h-3.5 md:w-4 md:h-4"></i> Стягнути один
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        if (galleryGrid) galleryGrid.appendChild(card);
+                        
+                    } catch (error) {
+                        console.error("Помилка:", file.name, error);
+                    }
+
+                    processedCount++;
+                    const percent = Math.round((processedCount / selectedFiles.length) * 100);
+                    if (progressBar) progressBar.style.width = `${percent}%`;
+                    if (progressPercent) progressPercent.textContent = `${percent}%`;
+                }
+
+                if (progressText) progressText.textContent = "Цукер п'є водичку, чекаємо...";
+                
+                setTimeout(() => {
+                    if (progressContainer) progressContainer.classList.add('hidden');
+                    if (animContainer) animContainer.classList.add('hidden');
+                    if (progressBar) progressBar.style.width = '0%';
+                    if (progressPercent) progressPercent.textContent = '0%';
+                    processBtn.disabled = false;
+                    processBtn.classList.remove('opacity-50', 'pointer-events-none');
+                    
+                    if (gallerySection) {
+                        gallerySection.classList.remove('hidden');
+                        gallerySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    refreshIcons();
+                }, 4500);
+            });
+        }
+
+        // ==========================================
+        // БАГАТОШАРОВІ РАМОКИ ТА ФОРМИ
+        // ==========================================
+        function drawBorderLines(ctx, finalWidth, finalHeight, settings) {
+            if (settings.totalBorderWidth <= 0 || !settings.borders.length) return;
+            
+            ctx.save();
+            let currentOffset = 0;
+
+            for (let i = 0; i < settings.borders.length; i++) {
+                const border = settings.borders[i];
+                if (border.width <= 0) continue;
+
+                if (border.color === 'rainbow') {
+                    const grad = ctx.createLinearGradient(0, 0, finalWidth, finalHeight);
+                    grad.addColorStop(0, '#ef4444'); grad.addColorStop(0.16, '#f97316');
+                    grad.addColorStop(0.33, '#eab308'); grad.addColorStop(0.5, '#22c55e');
+                    grad.addColorStop(0.66, '#3b82f6'); grad.addColorStop(0.83, '#8b5cf6');
+                    grad.addColorStop(1, '#ec4899');
+                    ctx.strokeStyle = grad;
+                } else {
+                    ctx.strokeStyle = border.color;
+                }
+                
+                ctx.lineWidth = border.width + 0.5; 
+                ctx.setLineDash([]);
+                ctx.lineCap = 'butt';
+                ctx.lineJoin = 'miter';
+                
+                const offset = currentOffset + (border.width / 2);
+                const rectW = finalWidth - (currentOffset * 2) - border.width;
+                const rectH = finalHeight - (currentOffset * 2) - border.width;
+                
+                if (border.shape === 'dashed') {
+                    ctx.setLineDash([border.width * 2, border.width * 1.5]);
+                    ctx.strokeRect(offset, offset, rectW, rectH);
+                } else if (border.shape === 'dotted') {
+                    ctx.setLineDash([border.width, border.width * 1.5]);
+                    ctx.lineCap = 'round';
+                    ctx.strokeRect(offset, offset, rectW, rectH);
+                } else if (border.shape === 'wave' || border.shape === 'zigzag') {
+                    ctx.beginPath();
+                    const step = 30; 
+                    const amp = border.width * 0.4; 
+                    const x = offset, y = offset, w = rectW, h = rectH;
+                    
+                    ctx.moveTo(x, y);
+                    
+                    // Top
+                    for(let px = x; px <= x+w; px+=step) {
+                        let nx = Math.min(px + step, x+w);
+                        let mx = px + (nx - px)/2;
+                        if(border.shape === 'zigzag') {
+                            ctx.lineTo(mx, y - amp);
+                            ctx.lineTo(nx, y);
+                        } else {
+                            ctx.quadraticCurveTo(mx, y - amp*2, nx, y);
+                        }
+                    }
+                    // Right
+                    for(let py = y; py <= y+h; py+=step) {
+                        let ny = Math.min(py + step, y+h);
+                        let my = py + (ny - py)/2;
+                        if(border.shape === 'zigzag') {
+                            ctx.lineTo(x+w + amp, my);
+                            ctx.lineTo(x+w, ny);
+                        } else {
+                            ctx.quadraticCurveTo(x+w + amp*2, my, x+w, ny);
+                        }
+                    }
+                    // Bottom
+                    for(let px = x+w; px >= x; px-=step) {
+                        let nx = Math.max(px - step, x);
+                        let mx = px - (px - nx)/2;
+                        if(border.shape === 'zigzag') {
+                            ctx.lineTo(mx, y+h + amp);
+                            ctx.lineTo(nx, y+h);
+                        } else {
+                            ctx.quadraticCurveTo(mx, y+h + amp*2, nx, y+h);
+                        }
+                    }
+                    // Left
+                    for(let py = y+h; py >= y; py-=step) {
+                        let ny = Math.max(py - step, y);
+                        let my = py - (py - ny)/2;
+                        if(border.shape === 'zigzag') {
+                            ctx.lineTo(x - amp, my);
+                            ctx.lineTo(x, ny);
+                        } else {
+                            ctx.quadraticCurveTo(x - amp*2, my, x, ny);
+                        }
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                } else {
+                    ctx.strokeRect(offset, offset, rectW, rectH);
+                }
+                
+                currentOffset += border.width;
+            }
+            ctx.restore();
+        }
+
+        // ==========================================
+        // ЛОГІКА ДЛЯ ФОТО ТА БАЗОВИХ КАДРІВ
+        // ==========================================
+        function drawMagicFrame(ctx, source, sourceW, sourceH, finalWidth, finalHeight, innerW, innerH, b, settings) {
+            ctx.save();
+            ctx.translate(b, b);
+            ctx.clearRect(0, 0, innerW, innerH);
+
+            let drawX = 0, drawY = 0, drawW = innerW, drawH = innerH;
+            const isCover = settings.resizeEnabled && settings.bgMode === 'cover';
+
+            if (isCover) {
+                const scaleCover = Math.max(innerW / sourceW, innerH / sourceH);
+                drawW = sourceW * scaleCover; drawH = sourceH * scaleCover;
+                drawX = (innerW - drawW) / 2; drawY = (innerH - drawH) / 2;
+            } else {
+                const scaleContain = Math.min(innerW / sourceW, innerH / sourceH);
+                drawW = sourceW * scaleContain; drawH = sourceH * scaleContain;
+                drawX = (innerW - drawW) / 2; drawY = (innerH - drawH) / 2;
             }
 
-            progressText.textContent = "Цукер п'є водичку, чекаємо...";
-            
-            setTimeout(() => {
-                progressContainer.classList.add('hidden');
-                document.getElementById('processingAnimation').classList.add('hidden');
-                progressBar.style.width = '0%';
-                progressPercent.textContent = '0%';
-                processBtn.disabled = false;
-                processBtn.classList.remove('opacity-50', 'pointer-events-none');
-                
-                gallerySection.classList.remove('hidden');
-                gallerySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                refreshIcons();
-            }, 4500);
-        });
+            ctx.beginPath();
+            ctx.rect(0, 0, innerW, innerH);
+            ctx.clip();
 
-        // НОВА ОНОВЛЕНА ЛОГІКА: Основна функція відмальовки Canvas
+            if (settings.resizeEnabled && !isCover) {
+                if (settings.bgMode === 'smart-smear') {
+                    ctx.save();
+                    ctx.filter = 'blur(25px) brightness(0.95)';
+                    if (drawY > 0) {
+                        ctx.drawImage(source, 0, 0, sourceW, 2, -10, -10, innerW + 20, drawY + 20);
+                        ctx.drawImage(source, 0, sourceH - 2, sourceW, 2, -10, drawY + drawH - 10, innerW + 20, innerH - (drawY + drawH) + 20);
+                    }
+                    if (drawX > 0) {
+                        ctx.drawImage(source, 0, 0, 2, sourceH, -10, -10, drawX + 20, innerH + 20);
+                        ctx.drawImage(source, sourceW - 2, 0, 2, sourceH, drawX + drawW - 10, -10, innerW - (drawX + drawW) + 20, innerH + 20);
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                    ctx.fillRect(0, 0, innerW, innerH);
+
+                } else if (settings.bgMode === 'blur' || settings.bgMode === 'blur-bw') {
+                    const scaleCover = Math.max(innerW / sourceW, innerH / sourceH) * 1.1;
+                    const wCover = sourceW * scaleCover; const hCover = sourceH * scaleCover;
+                    const xCover = (innerW - wCover) / 2; const yCover = (innerH - hCover) / 2;
+
+                    ctx.filter = settings.bgMode === 'blur-bw' ? 'blur(45px) brightness(0.9) grayscale(100%)' : 'blur(45px) brightness(0.9)';
+                    ctx.drawImage(source, xCover, yCover, wCover, hCover);
+                    ctx.filter = 'none';
+                } else if (settings.bgMode === 'echo') {
+                    const scaleCover = Math.max(innerW / sourceW, innerH / sourceH) * 1.5;
+                    const wCover = sourceW * scaleCover; const hCover = sourceH * scaleCover;
+                    const xCover = (innerW - wCover) / 2; const yCover = (innerH - hCover) / 2;
+
+                    ctx.filter = 'brightness(0.7) blur(3px)';
+                    ctx.drawImage(source, xCover, yCover, wCover, hCover);
+                    ctx.filter = 'none';
+                } else if (settings.bgMode === 'gradient') {
+                    ctx.fillStyle = settings.bgColor;
+                    ctx.fillRect(0, 0, innerW, innerH);
+                    const gradOverlay = ctx.createLinearGradient(0, 0, innerW, innerH);
+                    gradOverlay.addColorStop(0, 'rgba(255,255,255,0.4)');
+                    gradOverlay.addColorStop(1, 'rgba(0,0,0,0.1)');
+                    ctx.fillStyle = gradOverlay;
+                    ctx.fillRect(0, 0, innerW, innerH);
+                } else {
+                    ctx.fillStyle = settings.bgColor;
+                    ctx.fillRect(0, 0, innerW, innerH);
+                }
+            }
+
+            ctx.save();
+            if (settings.resizeEnabled && settings.bgMode === 'shadow') {
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 30;
+                ctx.shadowOffsetY = 15;
+            }
+
+            if (settings.hardUniq) {
+                ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
+                if (settings.uniqRotate) {
+                    const angle = (Math.random() * 0.1 - 0.05) * (Math.PI / 180);
+                    ctx.rotate(angle);
+                }
+                if (settings.uniqZoom) {
+                    const scale = 1.02 + (Math.random() * 0.02);
+                    ctx.scale(scale, scale);
+                }
+                if (settings.uniqColor) {
+                    const bright = 93 + Math.random() * 14;   
+                    const contrast = 93 + Math.random() * 14; 
+                    const saturate = 85 + Math.random() * 30; 
+                    ctx.filter = `brightness(${bright}%) contrast(${contrast}%) saturate(${saturate}%)`;
+                }
+                drawX = -drawW / 2;
+                drawY = -drawH / 2;
+            }
+
+            ctx.drawImage(source, drawX, drawY, drawW, drawH);
+            ctx.restore();
+
+            if (settings.watermarkEnabled && settings.watermarkImage && settings.isWmPlaced) {
+                ctx.save();
+                ctx.globalAlpha = settings.watermarkOpacity;
+                const wRatio = settings.watermarkScale;
+                const ww = innerW * wRatio;
+                const hh = ww * (settings.watermarkImage.height / settings.watermarkImage.width);
+                const wx = innerW * settings.watermarkRelX - ww / 2;
+                const wy = innerH * settings.watermarkRelY - hh / 2;
+                ctx.drawImage(settings.watermarkImage, wx, wy, ww, hh);
+                ctx.restore();
+            }
+
+            if (settings.hardUniq) {
+                ctx.save();
+                if (settings.uniqGrain) {
+                    if (!settings.cachedNoisePattern) {
+                        const noiseCanvas = document.createElement('canvas');
+                        noiseCanvas.width = 150; noiseCanvas.height = 150;
+                        const nCtx = noiseCanvas.getContext('2d');
+                        const nData = nCtx.createImageData(150, 150);
+                        for(let i=0; i<nData.data.length; i+=4) {
+                            const v = Math.random() * 255;
+                            nData.data[i] = v; nData.data[i+1] = v; nData.data[i+2] = v;
+                            nData.data[i+3] = 25;
+                        }
+                        nCtx.putImageData(nData, 0, 0);
+                        settings.cachedNoisePattern = ctx.createPattern(noiseCanvas, 'repeat');
+                    }
+                    ctx.globalCompositeOperation = 'overlay';
+                    ctx.fillStyle = settings.cachedNoisePattern;
+                    ctx.fillRect(0, 0, innerW, innerH);
+                }
+
+                if (settings.uniqVignette) {
+                    ctx.globalCompositeOperation = 'multiply';
+                    const gradient = ctx.createRadialGradient(
+                        innerW / 2, innerH / 2, innerW * 0.4, 
+                        innerW / 2, innerH / 2, innerW * 0.9
+                    );
+                    gradient.addColorStop(0, 'rgba(255,255,255,0)'); 
+                    gradient.addColorStop(1, 'rgba(0,0,0,0.3)');     
+                    overlayCtx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, innerW, innerH);
+                }
+                ctx.restore();
+            }
+
+            ctx.restore(); 
+
+            drawBorderLines(ctx, finalWidth, finalHeight, settings);
+
+            const imgData = ctx.getImageData(0, 0, finalWidth, finalHeight);
+            const data = imgData.data;
+            for (let i = 0; i < 400; i++) {
+                const randomIdx = Math.floor(Math.random() * (data.length / 4)) * 4;
+                data[randomIdx] = data[randomIdx] === 255 ? 254 : data[randomIdx] + 1;
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        const END_SLATE_PRESETS = {
+            'preset-girl': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1080&q=80&auto=format&fit=crop',
+            'preset-ocean': 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1080&q=80&auto=format&fit=crop',
+            'preset-forest': 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=1080&q=80&auto=format&fit=crop',
+            'preset-animal': 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=1080&q=80&auto=format&fit=crop',
+            'preset-sunset': 'https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=1080&q=80&auto=format&fit=crop'
+        };
+
+        function loadEndSlateImage(type) {
+            return new Promise((resolve) => {
+                if (type === 'custom') {
+                    resolve(customEndSlateImage || null);
+                } else if (END_SLATE_PRESETS[type]) {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous'; 
+                    img.onload = () => resolve(img);
+                    img.onerror = () => {
+                        console.warn("Не вдалося завантажити картинку з Unsplash, буде фоллбек.");
+                        resolve(null);
+                    };
+                    img.src = END_SLATE_PRESETS[type] + "&crossorigin=anonymous&_t=" + new Date().getTime();
+                } else {
+                    resolve(null);
+                }
+            });
+        }
+
         function processImage(file, settings) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
@@ -1188,198 +2627,35 @@
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
 
-                    let b = settings.bWidth || 0;
+                    let b = settings.totalBorderWidth || 0;
                     let finalWidth, finalHeight;
-                    let innerW, innerH;
 
-                    // 1. Попередній розрахунок розмірів
                     if (settings.resizeEnabled && settings.targetW > 0 && settings.targetH > 0) {
-                        // Якщо заданий жорсткий розмір (напр. 1080x1080)
-                        // Загальний розмір файлу буде 1080x1080, а зображення всередині стиснеться на товщину рамки
                         finalWidth = settings.targetW;
                         finalHeight = settings.targetH;
-                        innerW = Math.max(1, finalWidth - b * 2);
-                        innerH = Math.max(1, finalHeight - b * 2);
                     } else {
-                        // Якщо без ресайзу, розмір фінального файлу РОЗШИРЮЄТЬСЯ на товщину рамки, 
-                        // щоб картинка лишилася свого оригінального 100% розміру
-                        innerW = img.width;
-                        innerH = img.height;
-                        finalWidth = innerW + b * 2;
-                        finalHeight = innerH + b * 2;
+                        finalWidth = img.width;
+                        finalHeight = img.height;
                     }
+
+                    let innerW = Math.max(1, finalWidth - b * 2);
+                    let innerH = Math.max(1, finalHeight - b * 2);
 
                     canvas.width = finalWidth;
                     canvas.height = finalHeight;
 
-                    // Зміщуємо центр координат так, щоб малювати тільки у "внутрішній" робочій зоні, не зачіпаючи зону рамки
-                    ctx.save();
-                    ctx.translate(b, b);
-
-                    // Очищаємо робочу зону (на випадок прозорих PNG)
-                    ctx.clearRect(0, 0, innerW, innerH);
-
-                    // Тепер вся математика та ефекти працюють з innerW та innerH
-                    let drawX = 0, drawY = 0, drawW = innerW, drawH = innerH;
-                    const isCover = settings.resizeEnabled && settings.bgMode === 'cover';
-
-                    if (settings.resizeEnabled) {
-                        if (isCover) {
-                            const scaleCover = Math.max(innerW / img.width, innerH / img.height);
-                            drawW = img.width * scaleCover; drawH = img.height * scaleCover;
-                            drawX = (innerW - drawW) / 2; drawY = (innerH - drawH) / 2;
-                        } else {
-                            const scaleContain = Math.min(innerW / img.width, innerH / img.height);
-                            drawW = img.width * scaleContain; drawH = img.height * scaleContain;
-                            drawX = (innerW - drawW) / 2; drawY = (innerH - drawH) / 2;
-                        }
-                    } else {
-                        drawW = innerW;
-                        drawH = innerH;
-                    }
-
-                    // Кліпаємо область, щоб фонові ефекти не вилазили на територію рамки
-                    ctx.beginPath();
-                    ctx.rect(0, 0, innerW, innerH);
-                    ctx.clip();
-
-                    // 2. Відмальовка Фону
-                    if (settings.resizeEnabled && !isCover) {
-                        if (settings.bgMode === 'smart-smear') {
-                            ctx.save();
-                            ctx.filter = 'blur(25px) brightness(0.95)';
-                            if (drawY > 0) {
-                                ctx.drawImage(img, 0, 0, img.width, 2, -10, -10, innerW + 20, drawY + 20);
-                                ctx.drawImage(img, 0, img.height - 2, img.width, 2, -10, drawY + drawH - 10, innerW + 20, innerH - (drawY + drawH) + 20);
-                            }
-                            if (drawX > 0) {
-                                ctx.drawImage(img, 0, 0, 2, img.height, -10, -10, drawX + 20, innerH + 20);
-                                ctx.drawImage(img, img.width - 2, 0, 2, img.height, drawX + drawW - 10, -10, innerW - (drawX + drawW) + 20, innerH + 20);
-                            }
-                            ctx.restore();
-                            ctx.fillStyle = 'rgba(0,0,0,0.1)';
-                            ctx.fillRect(0, 0, innerW, innerH);
-
-                        } else if (settings.bgMode === 'blur' || settings.bgMode === 'blur-bw') {
-                            const scaleCover = Math.max(innerW / img.width, innerH / img.height) * 1.1;
-                            const wCover = img.width * scaleCover; const hCover = img.height * scaleCover;
-                            const xCover = (innerW - wCover) / 2; const yCover = (innerH - hCover) / 2;
-
-                            ctx.filter = settings.bgMode === 'blur-bw' ? 'blur(45px) brightness(0.9) grayscale(100%)' : 'blur(45px) brightness(0.9)';
-                            ctx.drawImage(img, xCover, yCover, wCover, hCover);
-                            ctx.filter = 'none';
-                        } else if (settings.bgMode === 'echo') {
-                            const scaleCover = Math.max(innerW / img.width, innerH / img.height) * 1.5;
-                            const wCover = img.width * scaleCover; const hCover = img.height * scaleCover;
-                            const xCover = (innerW - wCover) / 2; const yCover = (innerH - hCover) / 2;
-
-                            ctx.filter = 'brightness(0.7) blur(3px)';
-                            ctx.drawImage(img, xCover, yCover, wCover, hCover);
-                            ctx.filter = 'none';
-                        } else if (settings.bgMode === 'gradient') {
-                            ctx.fillStyle = settings.bgColor;
-                            ctx.fillRect(0, 0, innerW, innerH);
-                            const gradOverlay = ctx.createLinearGradient(0, 0, innerW, innerH);
-                            gradOverlay.addColorStop(0, 'rgba(255,255,255,0.4)');
-                            gradOverlay.addColorStop(1, 'rgba(0,0,0,0.1)');
-                            ctx.fillStyle = gradOverlay;
-                            ctx.fillRect(0, 0, innerW, innerH);
-                        } else {
-                            ctx.fillStyle = settings.bgColor;
-                            ctx.fillRect(0, 0, innerW, innerH);
-                        }
-                    }
-
-                    ctx.save();
+                    const baseFrameCanvas = document.createElement('canvas');
+                    baseFrameCanvas.width = img.width;
+                    baseFrameCanvas.height = img.height;
+                    const baseFrameCtx = baseFrameCanvas.getContext('2d');
+                    baseFrameCtx.drawImage(img, 0, 0);
                     
-                    if (settings.resizeEnabled && settings.bgMode === 'shadow') {
-                        ctx.shadowColor = 'rgba(0,0,0,0.3)';
-                        ctx.shadowBlur = 30;
-                        ctx.shadowOffsetY = 15;
+                    if (hasActiveEraserMask && enableEraser.checked) {
+                        applySmartEraser(baseFrameCtx, img.width, img.height, settings.eraserMode);
                     }
 
-                    // 3. Жорстка унікалізація (PRO)
-                    if (settings.hardUniq) {
-                        ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
-                        
-                        if (settings.uniqRotate) {
-                            const angle = (Math.random() * 0.1 - 0.05) * (Math.PI / 180);
-                            ctx.rotate(angle);
-                        }
-                        if (settings.uniqZoom) {
-                            const scale = 1.02 + (Math.random() * 0.02);
-                            ctx.scale(scale, scale);
-                        }
-                        if (settings.uniqColor) {
-                            const bright = 93 + Math.random() * 14;   
-                            const contrast = 93 + Math.random() * 14; 
-                            const saturate = 85 + Math.random() * 30; 
-                            ctx.filter = `brightness(${bright}%) contrast(${contrast}%) saturate(${saturate}%)`;
-                        }
-                        
-                        drawX = -drawW / 2;
-                        drawY = -drawH / 2;
-                    }
+                    drawMagicFrame(ctx, baseFrameCanvas, img.width, img.height, finalWidth, finalHeight, innerW, innerH, b, settings);
 
-                    ctx.drawImage(img, drawX, drawY, drawW, drawH);
-                    ctx.restore();
-
-                    // 4. PRO Накладання поверх зображення (Шум і Віньєтка)
-                    if (settings.hardUniq) {
-                        ctx.save();
-                        if (settings.uniqGrain) {
-                            const noiseCanvas = document.createElement('canvas');
-                            noiseCanvas.width = 150; noiseCanvas.height = 150;
-                            const nCtx = noiseCanvas.getContext('2d');
-                            const nData = nCtx.createImageData(150, 150);
-                            for(let i=0; i<nData.data.length; i+=4) {
-                                const v = Math.random() * 255;
-                                nData.data[i] = v; nData.data[i+1] = v; nData.data[i+2] = v;
-                                nData.data[i+3] = 25;
-                            }
-                            nCtx.putImageData(nData, 0, 0);
-                            
-                            ctx.globalCompositeOperation = 'overlay';
-                            const pattern = ctx.createPattern(noiseCanvas, 'repeat');
-                            ctx.fillStyle = pattern;
-                            ctx.fillRect(0, 0, innerW, innerH);
-                        }
-
-                        if (settings.uniqVignette) {
-                            ctx.globalCompositeOperation = 'multiply';
-                            const gradient = ctx.createRadialGradient(
-                                innerW / 2, innerH / 2, innerW * 0.4, 
-                                innerW / 2, innerH / 2, innerW * 0.9
-                            );
-                            gradient.addColorStop(0, 'rgba(255,255,255,1)');
-                            gradient.addColorStop(1, 'rgba(150,150,150,1)'); 
-                            ctx.fillStyle = gradient;
-                            ctx.fillRect(0, 0, innerW, innerH);
-                        }
-                        ctx.restore();
-                    }
-
-                    // Знімаємо трансформацію (повертаємо координати до початкових 0,0 усього canvas)
-                    ctx.restore();
-
-                    // 5. Відмальовка рамки (тепер вона лежить ззовні)
-                    if (b > 0) {
-                        ctx.lineWidth = b;
-                        ctx.strokeStyle = settings.bColor;
-                        // Малюємо рамку, лінія якої пройде рівно між краєм канвасу і краєм нашої inner-зони
-                        ctx.strokeRect(b / 2, b / 2, finalWidth - b, finalHeight - b);
-                    }
-
-                    // 6. Мікро-шум (завжди змінює хеш)
-                    const imgData = ctx.getImageData(0, 0, finalWidth, finalHeight);
-                    const data = imgData.data;
-                    for (let i = 0; i < 400; i++) {
-                        const randomIdx = Math.floor(Math.random() * (data.length / 4)) * 4;
-                        data[randomIdx] = data[randomIdx] === 255 ? 254 : data[randomIdx] + 1;
-                    }
-                    ctx.putImageData(imgData, 0, 0);
-
-                    // 7. Експорт
                     let mimeType = file.type;
                     let extension = '';
                     
@@ -1401,6 +2677,427 @@
                 };
 
                 reader.readAsDataURL(file);
+            });
+        }
+
+        function generateEndSlateCanvas(w, h, settings) {
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+
+            const loadedImg = settings.loadedEndSlateImage;
+
+            if (loadedImg) {
+                ctx.fillStyle = '#0f0f11';
+                ctx.fillRect(0, 0, w, h);
+                const scale = Math.max(w / loadedImg.width, h / loadedImg.height);
+                const drawW = loadedImg.width * scale;
+                const drawH = loadedImg.height * scale;
+                ctx.drawImage(loadedImg, (w - drawW) / 2, (h - drawH) / 2, drawW, drawH);
+
+                if (settings.endSlateType !== 'custom') {
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    ctx.fillRect(0, 0, w, h);
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = `bold ${Math.min(w,h) * 0.08}px Inter, sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowOffsetY = 5;
+
+                    let text = "Have a great day! 😊";
+                    if (settings.endSlateType === 'preset-ocean') text = "Relax & Enjoy 🌊";
+                    if (settings.endSlateType === 'preset-forest') text = "Nature Vibes 🌲";
+                    if (settings.endSlateType === 'preset-animal') text = "Stay Positive 🐶";
+                    if (settings.endSlateType === 'preset-sunset') text = "Beautiful Moments ✨";
+                    
+                    ctx.fillText(text, w/2, h/2);
+                }
+            } else { 
+                const grad = ctx.createLinearGradient(0, 0, w, h);
+                grad.addColorStop(0, '#fde047');
+                grad.addColorStop(1, '#f97316');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, w, h);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = `bold ${Math.min(w,h) * 0.08}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetY = 5;
+                ctx.fillText("Have a great day! 😊", w/2, h/2);
+            }
+            return canvas;
+        }
+
+        // ==========================================
+        // ВІДЕО ПРОЦЕСОР
+        // ==========================================
+        function processVideo(file, settings) {
+            return new Promise((resolve, reject) => {
+                const clonedFile = new File([file], file.name, { type: file.type });
+                
+                const video = document.createElement('video');
+                video.src = URL.createObjectURL(clonedFile);
+                video.crossOrigin = 'anonymous';
+                video.preload = 'auto'; 
+                video.style.position = 'absolute';
+                video.style.opacity = '0.01';
+                video.style.width = '1px';
+                video.style.height = '1px';
+                video.style.pointerEvents = 'none';
+                video.style.zIndex = '-9999';
+                document.body.appendChild(video);
+
+                video.onloadeddata = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    let b = settings.totalBorderWidth || 0;
+                    let finalWidth, finalHeight, innerW, innerH;
+
+                    if (settings.resizeEnabled && settings.targetW > 0 && settings.targetH > 0) {
+                        finalWidth = settings.targetW;
+                        finalHeight = settings.targetH;
+                    } else {
+                        finalWidth = video.videoWidth;
+                        finalHeight = video.videoHeight;
+                    }
+                    
+                    innerW = Math.max(1, finalWidth - b * 2);
+                    innerH = Math.max(1, finalHeight - b * 2);
+
+                    canvas.width = finalWidth;
+                    canvas.height = finalHeight;
+
+                    let drawX = 0, drawY = 0, drawW = innerW, drawH = innerH;
+                    const isCover = settings.resizeEnabled && settings.bgMode === 'cover';
+
+                    if (isCover) {
+                        const scaleCover = Math.max(innerW / video.videoWidth, innerH / video.videoHeight);
+                        drawW = video.videoWidth * scaleCover; drawH = video.videoHeight * scaleCover;
+                        drawX = (innerW - drawW) / 2; drawY = (innerH - drawH) / 2;
+                    } else {
+                        const scaleContain = Math.min(innerW / video.videoWidth, innerH / video.videoHeight);
+                        drawW = video.videoWidth * scaleContain; drawH = video.videoHeight * scaleContain;
+                        drawX = (innerW - drawW) / 2; drawY = (innerH - drawH) / 2;
+                    }
+
+                    const baseFrameCanvas = document.createElement('canvas');
+                    baseFrameCanvas.width = video.videoWidth;
+                    baseFrameCanvas.height = video.videoHeight;
+                    const baseFrameCtx = baseFrameCanvas.getContext('2d');
+
+                    const bgCanvas = document.createElement('canvas');
+                    bgCanvas.width = finalWidth; bgCanvas.height = finalHeight;
+                    const bgCtx = bgCanvas.getContext('2d');
+                    
+                    baseFrameCtx.drawImage(video, 0, 0);
+                    if (hasActiveEraserMask && enableEraser.checked) {
+                        applySmartEraser(baseFrameCtx, video.videoWidth, video.videoHeight, settings.eraserMode);
+                    }
+
+                    bgCtx.translate(b, b);
+                    bgCtx.beginPath();
+                    bgCtx.rect(0, 0, innerW, innerH);
+                    bgCtx.clip();
+
+                    if (settings.resizeEnabled && !isCover) {
+                        if (settings.bgMode === 'smart-smear') {
+                            bgCtx.save();
+                            bgCtx.filter = 'blur(25px) brightness(0.95)';
+                            if (drawY > 0) {
+                                bgCtx.drawImage(baseFrameCanvas, 0, 0, video.videoWidth, 2, -10, -10, innerW + 20, drawY + 20);
+                                bgCtx.drawImage(baseFrameCanvas, 0, video.videoHeight - 2, video.videoWidth, 2, -10, drawY + drawH - 10, innerW + 20, innerH - (drawY + drawH) + 20);
+                            }
+                            if (drawX > 0) {
+                                bgCtx.drawImage(baseFrameCanvas, 0, 0, 2, video.videoHeight, -10, -10, drawX + 20, innerH + 20);
+                                bgCtx.drawImage(baseFrameCanvas, video.videoWidth - 2, 0, 2, video.videoHeight, drawX + drawW - 10, -10, innerW - (drawX + drawW) + 20, innerH + 20);
+                            }
+                            bgCtx.restore();
+                            bgCtx.fillStyle = 'rgba(0,0,0,0.1)';
+                            bgCtx.fillRect(0, 0, innerW, innerH);
+                        } else if (settings.bgMode === 'blur' || settings.bgMode === 'blur-bw') {
+                            const scaleCover = Math.max(innerW / video.videoWidth, innerH / video.videoHeight) * 1.1;
+                            const wCover = video.videoWidth * scaleCover; const hCover = video.videoHeight * scaleCover;
+                            const xCover = (innerW - wCover) / 2; const yCover = (innerH - hCover) / 2;
+
+                            bgCtx.filter = settings.bgMode === 'blur-bw' ? 'blur(45px) brightness(0.9) grayscale(100%)' : 'blur(45px) brightness(0.9)';
+                            bgCtx.drawImage(baseFrameCanvas, xCover, yCover, wCover, hCover);
+                        } else if (settings.bgMode === 'echo') {
+                            const scaleCover = Math.max(innerW / video.videoWidth, innerH / video.videoHeight) * 1.5;
+                            const wCover = video.videoWidth * scaleCover; const hCover = video.videoHeight * scaleCover;
+                            const xCover = (innerW - wCover) / 2; const yCover = (innerH - hCover) / 2;
+
+                            bgCtx.filter = 'brightness(0.7) blur(3px)';
+                            bgCtx.drawImage(baseFrameCanvas, xCover, yCover, wCover, hCover);
+                        } else if (settings.bgMode === 'gradient') {
+                            bgCtx.fillStyle = settings.bgColor;
+                            bgCtx.fillRect(0, 0, innerW, innerH);
+                            const gradOverlay = bgCtx.createLinearGradient(0, 0, innerW, innerH);
+                            gradOverlay.addColorStop(0, 'rgba(255,255,255,0.4)');
+                            gradOverlay.addColorStop(1, 'rgba(0,0,0,0.1)');
+                            bgCtx.fillStyle = gradOverlay;
+                            bgCtx.fillRect(0, 0, innerW, innerH);
+                        } else {
+                            bgCtx.fillStyle = settings.bgColor;
+                            bgCtx.fillRect(0, 0, innerW, innerH);
+                        }
+                    }
+
+                    const overlayCanvas = document.createElement('canvas');
+                    overlayCanvas.width = innerW; overlayCanvas.height = innerH;
+                    const overlayCtx = overlayCanvas.getContext('2d');
+                    
+                    if (settings.hardUniq) {
+                        if (settings.uniqGrain) {
+                            if (!settings.cachedNoisePattern) {
+                                const noiseCanvas = document.createElement('canvas');
+                                noiseCanvas.width = 150; noiseCanvas.height = 150;
+                                const nCtx = noiseCanvas.getContext('2d');
+                                const nData = nCtx.createImageData(150, 150);
+                                for(let i=0; i<nData.data.length; i+=4) {
+                                    const v = Math.random() * 255;
+                                    nData.data[i] = v; nData.data[i+1] = v; nData.data[i+2] = v;
+                                    nData.data[i+3] = 25;
+                                }
+                                nCtx.putImageData(nData, 0, 0);
+                                settings.cachedNoisePattern = overlayCtx.createPattern(noiseCanvas, 'repeat');
+                            }
+                            overlayCtx.fillStyle = settings.cachedNoisePattern;
+                            overlayCtx.fillRect(0, 0, innerW, innerH);
+                        }
+
+                        if (settings.uniqVignette) {
+                            overlayCtx.globalCompositeOperation = 'source-over'; 
+                            const gradient = overlayCtx.createRadialGradient(
+                                innerW / 2, innerH / 2, innerW * 0.4, 
+                                innerW / 2, innerH / 2, innerW * 0.9
+                            );
+                            gradient.addColorStop(0, 'rgba(255,255,255,0)'); 
+                            gradient.addColorStop(1, 'rgba(0,0,0,0.3)');     
+                            overlayCtx.fillStyle = gradient;
+                            overlayCtx.fillRect(0, 0, innerW, innerH);
+                        }
+                    }
+
+                    const staticAngle = (settings.hardUniq && settings.uniqRotate) ? (Math.random() * 0.1 - 0.05) * (Math.PI / 180) : 0;
+                    const staticScale = (settings.hardUniq && settings.uniqZoom) ? 1.02 + (Math.random() * 0.02) : 1;
+                    let staticFilter = 'none';
+                    if (settings.hardUniq && settings.uniqColor) {
+                        const bright = 93 + Math.random() * 14;   
+                        const contrast = 93 + Math.random() * 14; 
+                        const saturate = 85 + Math.random() * 30; 
+                        staticFilter = `brightness(${bright}%) contrast(${contrast}%) saturate(${saturate}%)`;
+                    }
+
+                    const fps = 30;
+                    const canvasStream = canvas.captureStream(fps);
+                    let audioCtx, gainNode;
+
+                    try {
+                        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        const sourceNode = audioCtx.createMediaElementSource(video);
+                        gainNode = audioCtx.createGain(); 
+                        const dest = audioCtx.createMediaStreamDestination();
+                        
+                        sourceNode.connect(gainNode);
+                        gainNode.connect(dest);
+                        
+                        if (dest.stream.getAudioTracks().length > 0) {
+                            canvasStream.addTrack(dest.stream.getAudioTracks()[0]);
+                        }
+                    } catch (e) {
+                        console.warn("Аудіо недоступне", e);
+                    }
+
+                    let mime = 'video/webm;codecs=vp9';
+                    if (MediaRecorder.isTypeSupported('video/mp4')) {
+                        mime = 'video/mp4';
+                    } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
+                        mime = 'video/webm;codecs=h264';
+                    }
+
+                    const baseBitrate = 5000000;
+                    const bitrate = settings.quality === 1.0 ? baseBitrate * 1.5 : baseBitrate * settings.quality;
+
+                    const recorder = new MediaRecorder(canvasStream, { mimeType: mime, videoBitsPerSecond: bitrate });
+                    const chunks = [];
+
+                    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+                    
+                    recorder.onstop = () => {
+                        const blob = new Blob(chunks, { type: mime });
+                        const ext = mime.includes('mp4') ? '.mp4' : '.webm';
+                        document.body.removeChild(video);
+                        URL.revokeObjectURL(video.src); 
+                        if (audioCtx && audioCtx.state !== 'closed') audioCtx.close();
+                        resolve({ blob, extension: ext });
+                    };
+
+                    let isDrawingEndSlate = false;
+                    let endSlateStartTime = 0;
+                    const endSlateImage = settings.endSlateEnabled ? generateEndSlateCanvas(innerW, innerH, settings) : null;
+                    let animationId = null;
+
+                    const transitionToEndSlateOrStop = () => {
+                        if (isDrawingEndSlate) return; 
+                        
+                        if (settings.endSlateEnabled) {
+                            isDrawingEndSlate = true;
+                            endSlateStartTime = performance.now();
+                            if (gainNode && audioCtx) {
+                                gainNode.gain.setValueAtTime(gainNode.gain.value, audioCtx.currentTime);
+                                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1);
+                            }
+                        } else {
+                            if (recorder.state !== 'inactive') recorder.stop();
+                        }
+                    };
+
+                    const drawFrame = () => {
+                        if (recorder.state === 'inactive') return;
+
+                        const now = performance.now(); 
+
+                        if (!isDrawingEndSlate && video.paused && !video.ended) {
+                            animationId = requestAnimationFrame(drawFrame);
+                            return;
+                        }
+                        
+                        ctx.clearRect(0, 0, finalWidth, finalHeight);
+
+                        if (isDrawingEndSlate) {
+                            if (now - endSlateStartTime >= settings.endSlateDuration * 1000) {
+                                if (recorder.state !== 'inactive') recorder.stop();
+                                return;
+                            }
+                            
+                            ctx.fillStyle = '#0f0f11';
+                            ctx.fillRect(0, 0, finalWidth, finalHeight);
+                            
+                            ctx.save();
+                            ctx.translate(b, b);
+                            ctx.beginPath();
+                            ctx.rect(0, 0, innerW, innerH);
+                            ctx.clip();
+                            
+                            ctx.drawImage(endSlateImage, 0, 0);
+                            
+                            if (settings.hardUniq && (settings.uniqGrain || settings.uniqVignette)) {
+                                ctx.globalCompositeOperation = settings.uniqGrain ? 'overlay' : 'source-over';
+                                ctx.drawImage(overlayCanvas, 0, 0);
+                            }
+                            ctx.restore();
+                            
+                            drawBorderLines(ctx, finalWidth, finalHeight, settings);
+                            
+                            const imgData = ctx.getImageData(0, 0, finalWidth, finalHeight);
+                            const data = imgData.data;
+                            for (let i = 0; i < 200; i++) {
+                                const randomIdx = Math.floor(Math.random() * (data.length / 4)) * 4;
+                                data[randomIdx] = data[randomIdx] === 255 ? 254 : data[randomIdx] + 1;
+                            }
+                            ctx.putImageData(imgData, 0, 0);
+                            
+                            if (recorder.state !== 'inactive') {
+                                animationId = requestAnimationFrame(drawFrame);
+                            }
+                        } else {
+                            ctx.drawImage(bgCanvas, 0, 0);
+
+                            ctx.save();
+                            ctx.translate(b, b);
+                            
+                            ctx.beginPath();
+                            ctx.rect(0, 0, innerW, innerH);
+                            ctx.clip();
+
+                            if (settings.resizeEnabled && settings.bgMode === 'shadow') {
+                                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                                ctx.shadowBlur = 30;
+                                ctx.shadowOffsetY = 15;
+                            }
+
+                            // МАЙСТЕР-ГУМКА
+                            baseFrameCtx.drawImage(video, 0, 0);
+                            if (hasActiveEraserMask && enableEraser.checked) {
+                                applySmartEraser(baseFrameCtx, video.videoWidth, video.videoHeight, settings.eraserMode);
+                            }
+
+                            ctx.save();
+                            ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
+                            if (settings.hardUniq) {
+                                if (staticAngle !== 0) ctx.rotate(staticAngle);
+                                if (staticScale !== 1) ctx.scale(staticScale, staticScale);
+                                if (staticFilter !== 'none') ctx.filter = staticFilter;
+                            }
+                            ctx.drawImage(baseFrameCanvas, -drawW / 2, -drawH / 2, drawW, drawH);
+                            ctx.restore(); 
+
+                            // Вставка PNG Вотермарки
+                            if (settings.watermarkEnabled && settings.watermarkImage && settings.isWmPlaced) {
+                                ctx.save();
+                                ctx.globalAlpha = settings.watermarkOpacity;
+                                const wRatio = settings.watermarkScale;
+                                const ww = innerW * wRatio;
+                                const hh = ww * (settings.watermarkImage.height / settings.watermarkImage.width);
+                                const wx = innerW * settings.watermarkRelX - ww / 2;
+                                const wy = innerH * settings.watermarkRelY - hh / 2;
+                                ctx.drawImage(settings.watermarkImage, wx, wy, ww, hh);
+                                ctx.restore();
+                            }
+
+                            if (settings.hardUniq && (settings.uniqGrain || settings.uniqVignette)) {
+                                ctx.globalCompositeOperation = settings.uniqGrain ? 'overlay' : 'source-over';
+                                ctx.drawImage(overlayCanvas, 0, 0);
+                            }
+                            
+                            ctx.restore(); 
+
+                            drawBorderLines(ctx, finalWidth, finalHeight, settings);
+
+                            const timeRemaining = (video.duration && !isNaN(video.duration)) ? (video.duration - video.currentTime) : 100;
+                            if (timeRemaining <= 0.05 || video.ended) {
+                                transitionToEndSlateOrStop();
+                            }
+
+                            if (recorder.state !== 'inactive') {
+                                animationId = requestAnimationFrame(drawFrame);
+                            }
+                        }
+                    };
+
+                    video.onplay = () => {
+                        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                        recorder.start();
+                        animationId = requestAnimationFrame(drawFrame);
+                    };
+
+                    video.onended = () => {
+                        transitionToEndSlateOrStop();
+                    };
+
+                    video.play().catch(e => {
+                        console.warn("Play with audio blocked, trying muted...", e);
+                        video.muted = true; 
+                        video.play().catch(err => {
+                            document.body.removeChild(video);
+                            reject(err);
+                        });
+                    });
+                };
+                
+                video.onerror = (e) => {
+                    document.body.removeChild(video);
+                    URL.revokeObjectURL(video.src);
+                    if (audioCtx && audioCtx.state !== 'closed') audioCtx.close();
+                    reject(e);
+                };
             });
         }
     </script>
